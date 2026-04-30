@@ -1,1 +1,0 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/input/usekeys.ts","./src/scene/chasecamera.tsx","./src/scene/ground.tsx","./src/scene/truck.tsx","./src/scene/world.tsx","./src/scene/truckref.ts","./src/ui/hud.tsx"],"version":"5.9.3"}
