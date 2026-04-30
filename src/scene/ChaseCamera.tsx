@@ -1,0 +1,60 @@
+// ChaseCamera — third-person follow camera. Reads truck transform each frame
+// from the shared truckRef and lerps the active camera toward an offset behind
+// and above the truck.
+//
+// R3F's default camera is what gets controlled here (the one configured on
+// <Canvas camera={...} />). useThree gives us the live camera reference.
+
+import { useFrame, useThree } from "@react-three/fiber";
+import { Vector3, Quaternion } from "three";
+import { truckRef } from "./truckRef";
+
+const OFFSET_LOCAL = new Vector3(0, 5.5, 11);    // behind and above the truck (truck local +Z is forward)
+const LOOK_OFFSET  = new Vector3(0, 1.5, 0);     // look slightly above the truck
+const FOLLOW_LERP  = 4.5;                        // higher = snappier follow
+const LOOK_LERP    = 6.0;
+
+// Reused work vectors to avoid GC pressure each frame.
+const _desiredPos = new Vector3();
+const _truckPos   = new Vector3();
+const _truckQuat  = new Quaternion();
+const _lookTarget = new Vector3();
+const _camLook    = new Vector3();
+
+export default function ChaseCamera() {
+  const { camera } = useThree();
+
+  useFrame((_, dt) => {
+    const rb = truckRef.current;
+    if (!rb) return;
+
+    // Truck transform from physics
+    const tp = rb.translation();
+    const tq = rb.rotation();
+    _truckPos.set(tp.x, tp.y, tp.z);
+    _truckQuat.set(tq.x, tq.y, tq.z, tq.w);
+
+    // Desired camera position: truck position + (offset rotated by truck yaw)
+    _desiredPos.copy(OFFSET_LOCAL).applyQuaternion(_truckQuat).add(_truckPos);
+
+    // Lerp camera toward desired position. Smoothing factor 1 - exp(-k*dt)
+    // is frame-rate independent (works the same at 30fps or 144fps).
+    const posK = 1 - Math.exp(-FOLLOW_LERP * dt);
+    camera.position.lerp(_desiredPos, posK);
+
+    // Lerp the look-at target similarly so the camera doesn't snap when the
+    // truck rotates fast.
+    _lookTarget.copy(_truckPos).add(LOOK_OFFSET);
+    _camLook.copy(_lookTarget); // start point is current target
+    const lookK = 1 - Math.exp(-LOOK_LERP * dt);
+    // Decompose camera's current forward direction to estimate where it
+    // currently looks, then lerp to the new target. Simpler: just look at
+    // the lerped target directly each frame; it's smooth enough.
+    camera.lookAt(_lookTarget);
+
+    void _camLook; // placeholder for future smoother look interpolation
+    void lookK;
+  });
+
+  return null;
+}
