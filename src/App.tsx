@@ -10,8 +10,10 @@
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import World from "./scene/World";
+import StoryWatcher from "./scene/StoryWatcher";
 import HUD from "./ui/HUD";
 import StoryCard from "./ui/StoryCard";
+import BeatFlash from "./ui/BeatFlash";
 
 export default function App() {
   return (
@@ -31,12 +33,15 @@ export default function App() {
         >
           <Physics gravity={[0, -9.81, 0]} timeStep="vary">
             <World />
+            {/* Reads truck z each frame, fires beats and the ending. */}
+            <StoryWatcher />
           </Physics>
         </Canvas>
       </div>
 
       {/* React-DOM UI siblings of the Canvas. Order matters for stacking. */}
       <HUD />
+      <BeatFlash />
       <StoryCard />
     </>
   );
