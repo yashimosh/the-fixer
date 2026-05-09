@@ -21,9 +21,11 @@ export interface GameState {
   // Where in the story we are
   phase: StoryPhase;
 
-  // Cargo state (placeholder — wired up when cargo physics exist)
+  // Cargo state — decrements when the player drives too fast at risk beats.
+  // Determines which ending variant fires at END_Z.
   cargoTotal:    number;
   cargoSecured:  number;
+  loseCargoItem: () => void;
 
   // Transient HUD flash text (mid-run beats land here; HUD reads it).
   // Bumping `flashId` causes the HUD to re-trigger its fade-in animation
@@ -53,6 +55,8 @@ export const useGame = create<GameState>((set, get) => ({
   endingState:  null,
   flashText:    null,
   flashId:      0,
+
+  loseCargoItem: () => set((s) => ({ cargoSecured: Math.max(0, s.cargoSecured - 1) })),
 
   startRun: () => set({ phase: "running" }),
   endRun:   (s) => set({ phase: "ended", endingState: s }),

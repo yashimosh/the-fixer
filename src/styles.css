@@ -147,6 +147,22 @@ html, body, #root {
   background: rgba(232, 230, 225, 0.04);
 }
 
+/* Cargo dots — top-right, dim by default. Four small squares.
+   Secured = warm accent; lost = barely-visible dark. No animation —
+   the loss is silent, the ending does the explaining. */
+.cargo-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+}
+.dot--on  { background: var(--accent); opacity: 0.55; }
+.dot--off { background: var(--fg);     opacity: 0.10; }
+
 /* Beat flash — transient mid-run sentence. Sits high-center of the screen,
    fades in/out so the player can read without losing the road. */
 .beat-flash {

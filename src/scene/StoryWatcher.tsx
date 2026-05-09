@@ -24,6 +24,11 @@ const END_Z            = 120;   // truck-z threshold for crossing into "after"
 const END_MIN_SECONDS  = 8;     // floor on run duration before ending fires
 const END_DELAY_AFTER  = 4;     // additional seconds past END_Z before card
 
+// Cargo-risk threshold — m/s. Driving faster than this when a cargoRisk
+// beat fires drops one cargo item. 8 m/s ≈ 29 km/h; achievable at normal
+// pace, punishing only if the player is pushing speed through narrative beats.
+const CARGO_RISK_SPEED = 8;
+
 export default function StoryWatcher() {
   const fired = useRef<Set<number>>(new Set());
   const runStartedAt = useRef<number | null>(null);
@@ -49,6 +54,17 @@ export default function StoryWatcher() {
         fired.current.add(i);
         useGame.getState().showBeat(beat.text);
         shake.countdown = 0.38; // brief camera jolt so the beat has a physical marker
+
+        // Cargo-risk check — if this beat is a risk moment and the player is
+        // driving above threshold, one cargo item is lost. No flash, no UI
+        // interrupt — the consequence shows only in the ending variant.
+        if (beat.cargoRisk) {
+          const vel = rb.linvel();
+          const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+          if (speed > CARGO_RISK_SPEED) {
+            useGame.getState().loseCargoItem();
+          }
+        }
       }
     });
 

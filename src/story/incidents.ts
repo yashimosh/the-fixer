@@ -13,8 +13,10 @@ export interface IncidentText {
   intro: string[];
 
   /** Position-triggered mid-run beats. triggerZ is world-z; beat fires
-      when the truck crosses it. Will be wired up when the route is built. */
-  beats: { triggerZ: number; text: string }[];
+      when the truck crosses it.
+      cargoRisk: if true, StoryWatcher checks truck speed when this beat fires
+      — above threshold, one cargo item is lost. */
+  beats: { triggerZ: number; text: string; cargoRisk?: boolean }[];
 
   /** Ending variants by cargo state. */
   endings: {
@@ -41,17 +43,24 @@ export const CANONICAL_2017: IncidentText = {
   // Beats are evenly spread across the 220 m run (SPAWN_Z -100 → END_Z +120).
   // Each fires once. Tonal mix: logistics → grief → dark pause → civilian
   // cost → tactical awareness → ellipsis. Not all elegies. Not all death.
+  // Beats are evenly spread across the 220 m run (SPAWN_Z -100 → END_Z +120).
+  // cargoRisk beats: beats 0, 2, 4 — checkpoint, radio, Hilux.
+  // If truck speed > 8 m/s when a risk beat fires, one cargo item is lost.
+  // This means: drive fast through a checkpoint = look suspicious, rush the
+  // radio turn = journalist drops something, close the Hilux gap = near miss.
   beats: [
     {
       triggerZ: -75,
+      cargoRisk: true,
       text: "The checkpoint has been here three weeks. The soldier waves you through with his cigarette. He knows the truck.",
     },
     {
       triggerZ: -42,
-      text: "Bakhtiyar took an IED in Old City three weeks ago. The videographer reminds you of him. You don't mention it.",
+      text: "Bakhtiyar took an IED in Old City three weeks ago. The videographer is the same age. Same build. You don't mention it.",
     },
     {
       triggerZ: -10,
+      cargoRisk: true,
       text: "Your radio picks up Rudaw. You turn it off before she asks what they're saying.",
     },
     {
@@ -60,6 +69,7 @@ export const CANONICAL_2017: IncidentText = {
     },
     {
       triggerZ: +58,
+      cargoRisk: true,
       text: "The Hilux ahead has a green flag in the window. You keep two hundred metres between you. Standard.",
     },
     {
