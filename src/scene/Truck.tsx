@@ -24,7 +24,8 @@
 // existing yellow-stripe accent removed (Sor's truck is unmarked civilian
 // cover — no decals, no flags, no press markings).
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, type RefObject } from "react";
+import type { Group } from "three";
 import { useFrame } from "@react-three/fiber";
 import { RigidBody, CuboidCollider, type RapierRigidBody } from "@react-three/rapier";
 import { useKeys } from "../input/useKeys";
@@ -58,12 +59,18 @@ export default function Truck() {
   const body = useRef<RapierRigidBody>(null);
   const keys = useKeys();
 
+  // Per-wheel spin refs (inner group, rotated each frame by road speed).
+  const wFL = useRef<Group>(null);  // front-left
+  const wFR = useRef<Group>(null);  // front-right
+  const wRL = useRef<Group>(null);  // rear-left
+  const wRR = useRef<Group>(null);  // rear-right
+
   useEffect(() => {
     truckRef.current = body.current;
     return () => { truckRef.current = null; };
   }, []);
 
-  useFrame(() => {
+  useFrame((_, dt) => {
     const rb = body.current;
     if (!rb) return;
     const k = keys.current;
@@ -89,6 +96,16 @@ export default function Truck() {
 
     if (k.left)  rb.applyTorqueImpulse({ x: 0, y:  STEER_TORQUE, z: 0 }, true);
     if (k.right) rb.applyTorqueImpulse({ x: 0, y: -STEER_TORQUE, z: 0 }, true);
+
+    // Wheel spin — driven by actual Z velocity (truck faces world +Z after
+    // the spawn π rotation, so vel.z ≈ forward speed). Pure rolling:
+    // Δθ = (vel / radius) * dt. Right-hand rule, +Z travel → +X rotation.
+    const vel = rb.linvel();
+    const spinDelta = (vel.z / WHEEL_R) * dt;
+    if (wFL.current) wFL.current.rotation.x += spinDelta;
+    if (wFR.current) wFR.current.rotation.x += spinDelta;
+    if (wRL.current) wRL.current.rotation.x += spinDelta;
+    if (wRR.current) wRR.current.rotation.x += spinDelta;
   });
 
   return (
@@ -181,29 +198,40 @@ export default function Truck() {
         <meshStandardMaterial color={COL_TAIL} emissive={COL_TAIL} emissiveIntensity={0.2} />
       </mesh>
 
-      {/* ── Wheels — visual only; one cylinder per corner ─────────────── */}
-      <Wheel position={[-TRACK_WIDTH / 2, -0.5, -WHEELBASE / 2]} />
-      <Wheel position={[ TRACK_WIDTH / 2, -0.5, -WHEELBASE / 2]} />
-      <Wheel position={[-TRACK_WIDTH / 2, -0.5,  WHEELBASE / 2]} />
-      <Wheel position={[ TRACK_WIDTH / 2, -0.5,  WHEELBASE / 2]} />
+      {/* ── Wheels — visual; spin group driven by velocity each frame ─── */}
+      <Wheel position={[-TRACK_WIDTH / 2, -0.5, -WHEELBASE / 2]} spinRef={wFL} />
+      <Wheel position={[ TRACK_WIDTH / 2, -0.5, -WHEELBASE / 2]} spinRef={wFR} />
+      <Wheel position={[-TRACK_WIDTH / 2, -0.5,  WHEELBASE / 2]} spinRef={wRL} />
+      <Wheel position={[ TRACK_WIDTH / 2, -0.5,  WHEELBASE / 2]} spinRef={wRR} />
     </RigidBody>
   );
 }
 
-// Single wheel — cylinder rotated to align with the X axis (the truck's
-// width) so the round face points outward. Inner rim is a darker disc.
-function Wheel({ position }: { position: [number, number, number] }) {
+// Single wheel — outer group positions the wheel at its corner; inner spin
+// group (spinRef) is rotated each frame by road speed so the tyre visually
+// rolls. Cylinder is created along Y, rotated ±π/2 around Z so the round
+// face points outward along the truck's X axis (the axle direction).
+function Wheel({
+  position,
+  spinRef,
+}: {
+  position: [number, number, number];
+  spinRef: RefObject<Group>;
+}) {
   return (
     <group position={position}>
-      <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[WHEEL_R, WHEEL_R, WHEEL_W, 18]} />
-        <meshStandardMaterial color={COL_TIRE} roughness={0.95} metalness={0.0} />
-      </mesh>
-      {/* Rim — inner disc, slightly inset */}
-      <mesh rotation={[0, 0, Math.PI / 2]} position={[0, 0, 0]}>
-        <cylinderGeometry args={[WHEEL_R * 0.55, WHEEL_R * 0.55, WHEEL_W + 0.02, 12]} />
-        <meshStandardMaterial color={COL_RIM} roughness={0.6} metalness={0.4} />
-      </mesh>
+      {/* Spin group — rotation.x is driven by velocity in useFrame */}
+      <group ref={spinRef}>
+        <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[WHEEL_R, WHEEL_R, WHEEL_W, 18]} />
+          <meshStandardMaterial color={COL_TIRE} roughness={0.95} metalness={0.0} />
+        </mesh>
+        {/* Rim — inner disc, slightly inset */}
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[WHEEL_R * 0.55, WHEEL_R * 0.55, WHEEL_W + 0.02, 12]} />
+          <meshStandardMaterial color={COL_RIM} roughness={0.6} metalness={0.4} />
+        </mesh>
+      </group>
     </group>
   );
 }
