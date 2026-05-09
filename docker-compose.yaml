@@ -1,0 +1,31 @@
+# Coolify reads this for deployment (build_pack = dockercompose).
+# UUID `t70tvfzml60jc885889ldcox` is the Coolify application identifier;
+# Traefik label keys must match it for the proxy routes to bind correctly.
+
+services:
+  the-fixer:
+    build: .
+    restart: unless-stopped
+    networks:
+      - coolify
+    labels:
+      - traefik.enable=true
+      - traefik.http.middlewares.gzip.compress=true
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      - traefik.http.routers.http-0-t70tvfzml60jc885889ldcox.entryPoints=http
+      - traefik.http.routers.http-0-t70tvfzml60jc885889ldcox.middlewares=redirect-to-https
+      - "traefik.http.routers.http-0-t70tvfzml60jc885889ldcox.rule=Host(`thefixer.yashimosh.com`) && PathPrefix(`/`)"
+      - traefik.http.routers.http-0-t70tvfzml60jc885889ldcox.service=http-0-t70tvfzml60jc885889ldcox
+      - traefik.http.routers.https-0-t70tvfzml60jc885889ldcox.entryPoints=https
+      - traefik.http.routers.https-0-t70tvfzml60jc885889ldcox.middlewares=gzip
+      - "traefik.http.routers.https-0-t70tvfzml60jc885889ldcox.rule=Host(`thefixer.yashimosh.com`) && PathPrefix(`/`)"
+      - traefik.http.routers.https-0-t70tvfzml60jc885889ldcox.service=https-0-t70tvfzml60jc885889ldcox
+      - traefik.http.routers.https-0-t70tvfzml60jc885889ldcox.tls.certresolver=letsencrypt
+      - traefik.http.routers.https-0-t70tvfzml60jc885889ldcox.tls=true
+      - traefik.http.services.http-0-t70tvfzml60jc885889ldcox.loadbalancer.server.port=4321
+      - traefik.http.services.https-0-t70tvfzml60jc885889ldcox.loadbalancer.server.port=4321
+      - coolify.managed=true
+
+networks:
+  coolify:
+    external: true
