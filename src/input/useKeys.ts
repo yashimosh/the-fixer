@@ -24,6 +24,12 @@ export function useKeys() {
   useEffect(() => {
     const set = (k: keyof DriveKeys, v: boolean) => { keys.current[k] = v; };
 
+    // Expose keys ref globally — lets JS injection (demo mode, automation,
+    // screen recording helpers) drive the truck without event dispatch.
+    // Usage: window.__fixerKeys.fwd = true  (held forward)
+    //        window.__fixerKeys.fwd = false  (release)
+    (window as unknown as Record<string, unknown>).__fixerKeys = keys.current;
+
     const onDown = (e: KeyboardEvent) => {
       switch (e.code) {
         case "KeyW": case "ArrowUp":    set("fwd", true);   break;
