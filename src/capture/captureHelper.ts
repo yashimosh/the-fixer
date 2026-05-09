@@ -190,7 +190,8 @@ function setupCapture() {
         };
 
         // Try auto-download — works if Chrome hasn't blocked it
-        (window as unknown as Record<string, unknown>).__fixerDownload?.();
+        const dl = (window as unknown as Record<string, unknown>).__fixerDownload;
+        if (typeof dl === "function") dl();
 
         cancelAnimationFrame(rafId);
         console.info(`[fixer] Recording complete: ${fname} (${(blob.size / 1024).toFixed(0)} KB)`);
