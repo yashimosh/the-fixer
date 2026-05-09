@@ -12,13 +12,20 @@ import ChaseCamera from "./ChaseCamera";
 export default function World() {
   return (
     <>
-      {/* Sky — Preetham atmospheric scattering. Sun low + slightly side-on. */}
+      {/* Fallback scene background — dawn navy. Visible if Sky doesn't render
+          (e.g. tone mapping misconfigured) so it's never a browser-grey void. */}
+      <color attach="background" args={["#0f1e2e"]} />
+
+      {/* Sky — Preetham atmospheric scattering.
+          rayleigh 2.8 → deep blue Rayleigh band above horizon.
+          turbidity 7 → hazy dawn atmosphere, blends sun disk into horizon glow.
+          Sun low + side-on gives a clear warm/cold sky gradient. */}
       <Sky
-        sunPosition={[40, 8, -60]}
-        turbidity={4.5}
-        rayleigh={1.6}
-        mieCoefficient={0.006}
-        mieDirectionalG={0.86}
+        sunPosition={[80, 12, -100]}
+        turbidity={7}
+        rayleigh={2.8}
+        mieCoefficient={0.004}
+        mieDirectionalG={0.82}
       />
 
       {/* Lighting — dawn. Cool ambient, warm directional grazing the truck side-on. */}

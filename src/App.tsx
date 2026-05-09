@@ -8,6 +8,7 @@
 // the renderer swap is a Canvas-prop change, not a code rewrite.
 
 import { Canvas } from "@react-three/fiber";
+import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { Physics } from "@react-three/rapier";
 import World from "./scene/World";
 import StoryWatcher from "./scene/StoryWatcher";
@@ -28,6 +29,13 @@ export default function App() {
             stencil: false,
             depth: true,
             preserveDrawingBuffer: true, // helps screenshot capture in headless tools
+          }}
+          // ACESFilmic + sRGB: without these the Sky shader outputs un-tone-mapped
+          // linear RGB that reads as washed-out grey in the browser.
+          onCreated={({ gl }) => {
+            gl.toneMapping = ACESFilmicToneMapping;
+            gl.toneMappingExposure = 0.9;
+            gl.outputColorSpace = SRGBColorSpace;
           }}
           dpr={[1, 1.75]} // device pixel ratio cap; matches Border Run's perf budget
         >

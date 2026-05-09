@@ -33,11 +33,16 @@ import { truckRef } from "./truckRef";
 import { useGame } from "../store";
 import { SPAWN_X, SPAWN_Y, SPAWN_Z } from "./terrainFn";
 
-const ENGINE_FORCE      = 14;
-const STEER_TORQUE      = 5;
-const LINEAR_DAMPING    = 0.6;
-const ANGULAR_DAMPING   = 2.4;
-const BRAKE_DAMPING_X10 = 6.0;
+// Physics feel — a 70-series Land Cruiser on rough mountain roads.
+// Higher LINEAR_DAMPING makes terrain resistance tangible (hills slow you,
+// flat hardpack lets you build speed). STEER_TORQUE is deliberately lower
+// than arcade — the truck needs speed before it turns crisply.
+const ENGINE_FORCE      = 24;    // higher to punch through new damping
+const STEER_TORQUE      = 3.2;   // less snap; wide turns need planning
+const LINEAR_DAMPING    = 1.6;   // terrain resistance; limits top speed
+const ANGULAR_DAMPING   = 4.5;   // steering corrects quickly; no endless spin
+const BRAKE_DAMPING_X10 = 10.0;  // firm braking
+const MAX_SPEED         = 11;    // m/s ≈ 40 km/h; correct off-road top speed
 
 // Material colors — keep on the cool side so dawn warm light reads on top.
 const COL_CHASSIS  = "#5a4f3d";  // dust-coated brown body
@@ -86,21 +91,33 @@ export default function Truck() {
     rb.setLinearDamping(k.brake ? BRAKE_DAMPING_X10 : LINEAR_DAMPING);
     rb.setAngularDamping(ANGULAR_DAMPING);
 
+    const vel = rb.linvel();
+    const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+
+    // Drive — gate on MAX_SPEED so the truck has a real top end.
     if (k.fwd || k.back) {
-      const rot = rb.rotation();
-      const fx = -2 * (rot.x * rot.z + rot.w * rot.y);
-      const fz = -1 + 2 * (rot.x * rot.x + rot.y * rot.y);
-      const sign = k.fwd ? 1 : -0.6;
-      rb.applyImpulse({ x: fx * ENGINE_FORCE * sign, y: 0, z: fz * ENGINE_FORCE * sign }, true);
+      const belowCap = k.fwd ? speed < MAX_SPEED : speed < MAX_SPEED * 0.6;
+      if (belowCap) {
+        const rot = rb.rotation();
+        const fx = -2 * (rot.x * rot.z + rot.w * rot.y);
+        const fz = -1 + 2 * (rot.x * rot.x + rot.y * rot.y);
+        const sign = k.fwd ? 1 : -0.6;
+        rb.applyImpulse({ x: fx * ENGINE_FORCE * sign, y: 0, z: fz * ENGINE_FORCE * sign }, true);
+      }
     }
 
-    if (k.left)  rb.applyTorqueImpulse({ x: 0, y:  STEER_TORQUE, z: 0 }, true);
-    if (k.right) rb.applyTorqueImpulse({ x: 0, y: -STEER_TORQUE, z: 0 }, true);
+    // Steer — needs rolling speed; dead slow the truck won't pivot. At speed,
+    // torque drops back so high-speed turns require commitment, not a tap.
+    if (k.left || k.right) {
+      const steerFactor = Math.min(1, speed / 3) * Math.max(0.35, 1 - speed / (MAX_SPEED * 1.4));
+      const torque = STEER_TORQUE * steerFactor;
+      if (k.left)  rb.applyTorqueImpulse({ x: 0, y:  torque, z: 0 }, true);
+      if (k.right) rb.applyTorqueImpulse({ x: 0, y: -torque, z: 0 }, true);
+    }
 
     // Wheel spin — driven by actual Z velocity (truck faces world +Z after
     // the spawn π rotation, so vel.z ≈ forward speed). Pure rolling:
     // Δθ = (vel / radius) * dt. Right-hand rule, +Z travel → +X rotation.
-    const vel = rb.linvel();
     const spinDelta = (vel.z / WHEEL_R) * dt;
     if (wFL.current) wFL.current.rotation.x += spinDelta;
     if (wFR.current) wFR.current.rotation.x += spinDelta;

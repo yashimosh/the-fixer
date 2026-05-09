@@ -61,8 +61,10 @@ export function heightAt(x: number, z: number): number {
     Math.sin(x * 0.028) * Math.cos(z * 0.022) * Math.min(distFactor, 9);
 
   // Carve the track lower than surroundings — the valley the route runs in.
-  // Falloff is over 6m, so off-track ground rises within a short distance.
-  const carve = Math.max(0, 1 - distFromTrack / 6) * 2.0;
+  // Narrowed to 4m (was 6m) so the truck can't stray far without feeling the
+  // rise. The centre of the valley still has micro-bumps from the noise octaves
+  // above — the carve smooths the gross shape, not the surface texture.
+  const carve = Math.max(0, 1 - distFromTrack / 4) * 1.6;
 
   return climb + noise + peaks - carve;
 }
