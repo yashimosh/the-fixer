@@ -39,6 +39,10 @@ export interface GameState {
   // Mid-run beat broadcasting
   showBeat: (text: string) => void;
   clearFlash: () => void;
+
+  // Live speed (km/h) — updated from Truck.tsx every ~5 frames.
+  speedKmh: number;
+  setSpeed: (kmh: number) => void;
 }
 
 export const useGame = create<GameState>((set, get) => ({
@@ -55,4 +59,7 @@ export const useGame = create<GameState>((set, get) => ({
 
   showBeat: (text) => set({ flashText: text, flashId: get().flashId + 1 }),
   clearFlash: () => set({ flashText: null }),
+
+  speedKmh: 0,
+  setSpeed: (kmh) => set({ speedKmh: kmh }),
 }));

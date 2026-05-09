@@ -38,13 +38,34 @@ export const CANONICAL_2017: IncidentText = {
     "Engine on at 04:47. The streets are still empty.",
   ],
 
+  // Beats are evenly spread across the 220 m run (SPAWN_Z -100 → END_Z +120).
+  // Each fires once. Tonal mix: logistics → grief → dark pause → civilian
+  // cost → tactical awareness → ellipsis. Not all elegies. Not all death.
   beats: [
-    { triggerZ: -100, text: "Bakhtiyar took an IED in the Old City three weeks ago. The videographer reminds you of him. You don't say." },
-    { triggerZ: -85,  text: "Awat. He stopped driving in '15. He was tired. Now he's a stone." },
-    { triggerZ: -32,  text: "The Hilux took a JDAM in March. Two were inside. Coalition said they had clearance." },
-    { triggerZ: -12,  text: "Shifa Gardi. Rudaw. February. The bomb was not for her." },
-    { triggerZ:  35,  text: "They've been told there are papers crossing tonight. They don't know which truck." },
-    { triggerZ:  90,  text: "Every house here has someone who didn't come back." },
+    {
+      triggerZ: -75,
+      text: "The checkpoint has been here three weeks. The soldier waves you through with his cigarette. He knows the truck.",
+    },
+    {
+      triggerZ: -42,
+      text: "Bakhtiyar took an IED in Old City three weeks ago. The videographer reminds you of him. You don't mention it.",
+    },
+    {
+      triggerZ: -10,
+      text: "Your radio picks up Rudaw. You turn it off before she asks what they're saying.",
+    },
+    {
+      triggerZ: +22,
+      text: "Awat stopped driving in '15. Said he was tired. His wife runs the vegetable stall now, alone.",
+    },
+    {
+      triggerZ: +58,
+      text: "The Hilux ahead has a green flag in the window. You keep two hundred metres between you. Standard.",
+    },
+    {
+      triggerZ: +95,
+      text: "Shifa Gardi. Rudaw. February. The camera she used that day is still in evidence somewhere.",
+    },
   ],
 
   endings: {

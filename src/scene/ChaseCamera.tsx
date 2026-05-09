@@ -8,6 +8,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { Vector3, Quaternion } from "three";
 import { truckRef } from "./truckRef";
+import { shake } from "./shakeRef";
 
 const OFFSET_LOCAL = new Vector3(0, 6.5, 12);    // behind and above the truck
 const LOOK_OFFSET  = new Vector3(0, 2.2, 0);     // look slightly above the truck — frames the sky
@@ -51,6 +52,14 @@ export default function ChaseCamera() {
     // currently looks, then lerp to the new target. Simpler: just look at
     // the lerped target directly each frame; it's smooth enough.
     camera.lookAt(_lookTarget);
+
+    // ── Beat shake — small world-space jolt when a story beat fires ────
+    if (shake.countdown > 0) {
+      shake.countdown = Math.max(0, shake.countdown - dt);
+      const mag = 0.12 * (shake.countdown / 0.38); // fades as countdown falls
+      camera.position.x += (Math.random() - 0.5) * mag;
+      camera.position.y += (Math.random() - 0.5) * mag * 0.4;
+    }
 
     void _camLook; // placeholder for future smoother look interpolation
     void lookK;

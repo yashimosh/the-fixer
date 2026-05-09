@@ -9,6 +9,7 @@
 // useKeys hook — when phase !== "running", input is ignored at the consumer
 // (Truck) level.
 
+import * as Tone from "tone";
 import { useGame } from "../store";
 
 export default function StoryCard() {
@@ -24,9 +25,11 @@ export default function StoryCard() {
   let onClick: () => void = startRun;
 
   if (phase === "intro") {
-    lines = incident.intro;
+    lines  = incident.intro;
     action = "drive";
-    onClick = startRun;
+    // Tone.start() MUST fire inside the user gesture (button click) so the
+    // AudioContext is allowed to resume. EngineAudio picks it up next frame.
+    onClick = () => { void Tone.start(); startRun(); };
   } else if (phase === "ended") {
     const variant = ending ?? "clean";
     lines = incident.endings[variant];

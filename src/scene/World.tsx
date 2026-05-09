@@ -8,6 +8,7 @@ import { Sky } from "@react-three/drei";
 import Truck from "./Truck";
 import Terrain from "./Terrain";
 import ChaseCamera from "./ChaseCamera";
+import EngineAudio from "./EngineAudio";
 
 export default function World() {
   return (
@@ -56,6 +57,9 @@ export default function World() {
 
       {/* Chase camera — follows the truck's chassis transform every frame. */}
       <ChaseCamera />
+
+      {/* Procedural engine audio — pitches with truck velocity. */}
+      <EngineAudio />
     </>
   );
 }

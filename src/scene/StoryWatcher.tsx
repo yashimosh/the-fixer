@@ -18,6 +18,7 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { truckRef } from "./truckRef";
 import { useGame } from "../store";
+import { shake } from "./shakeRef";
 
 const END_Z            = 120;   // truck-z threshold for crossing into "after"
 const END_MIN_SECONDS  = 8;     // floor on run duration before ending fires
@@ -47,6 +48,7 @@ export default function StoryWatcher() {
       if (tz >= beat.triggerZ) {
         fired.current.add(i);
         useGame.getState().showBeat(beat.text);
+        shake.countdown = 0.38; // brief camera jolt so the beat has a physical marker
       }
     });
 

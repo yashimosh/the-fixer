@@ -52,8 +52,31 @@ html, body, #root {
 .hud.tl { top: 0; left: 0; }
 .hud.tr { top: 0; right: 0; text-align: right; }
 .hud.bl { bottom: 0; left: 0; }
+.hud.br { bottom: 0; right: 0; text-align: right; }
 .hud .k { opacity: 0.55; }
 .hud .v { opacity: 0.95; }
+
+/* Speed readout — bottom-right, larger number with small unit label */
+.speed-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding-bottom: 16px;
+}
+.speed-num {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+  text-align: right;
+}
+.speed-unit {
+  font-size: 10px;
+  opacity: 0.45;
+  letter-spacing: 0.1em;
+}
 
 /* Stage placeholder (pre-Canvas mount) */
 .boot {

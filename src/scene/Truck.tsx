@@ -61,8 +61,9 @@ const WHEEL_R     = 0.42;
 const WHEEL_W     = 0.32;
 
 export default function Truck() {
-  const body = useRef<RapierRigidBody>(null);
-  const keys = useKeys();
+  const body      = useRef<RapierRigidBody>(null);
+  const keys      = useKeys();
+  const frameNum  = useRef(0);
 
   // Per-wheel spin refs (inner group, rotated each frame by road speed).
   const wFL = useRef<Group>(null);  // front-left
@@ -113,6 +114,12 @@ export default function Truck() {
       const torque = STEER_TORQUE * steerFactor;
       if (k.left)  rb.applyTorqueImpulse({ x: 0, y:  torque, z: 0 }, true);
       if (k.right) rb.applyTorqueImpulse({ x: 0, y: -torque, z: 0 }, true);
+    }
+
+    // Throttled speed push to store — every 5 frames (~12 Hz at 60 fps)
+    frameNum.current++;
+    if (frameNum.current % 5 === 0) {
+      useGame.getState().setSpeed(Math.round(speed * 3.6));
     }
 
     // Wheel spin — driven by actual Z velocity (truck faces world +Z after
