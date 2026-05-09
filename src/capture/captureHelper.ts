@@ -186,12 +186,14 @@ function setupCapture() {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+          // URL intentionally NOT revoked here — keep blob alive so the
+          // extension can call __fixerDownload() again if the first attempt
+          // was silently blocked. Revoke manually when confirmed downloaded.
         };
 
-        // Try auto-download — works if Chrome hasn't blocked it
-        const dl = (window as unknown as Record<string, unknown>).__fixerDownload;
-        if (typeof dl === "function") dl();
+        // Do NOT auto-call __fixerDownload — Chrome blocks a.click() from setTimeout
+        // (no user gesture). Call window.__fixerDownload() manually from the
+        // extension JS injection context after recording completes.
 
         cancelAnimationFrame(rafId);
         console.info(`[fixer] Recording complete: ${fname} (${(blob.size / 1024).toFixed(0)} KB)`);
