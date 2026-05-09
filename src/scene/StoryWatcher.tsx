@@ -56,13 +56,20 @@ export default function StoryWatcher() {
         shake.countdown = 0.38; // brief camera jolt so the beat has a physical marker
 
         // Cargo-risk check — if this beat is a risk moment and the player is
-        // driving above threshold, one cargo item is lost. No flash, no UI
-        // interrupt — the consequence shows only in the ending variant.
+        // driving above threshold, one cargo item is lost.
+        // Loss is signalled by a smaller camera shake + a diegetic flash line
+        // so the player has a real-time signal, not just a dimmed dot post-run.
         if (beat.cargoRisk) {
           const vel = rb.linvel();
           const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
           if (speed > CARGO_RISK_SPEED) {
             useGame.getState().loseCargoItem();
+            shake.countdown = 0.18; // shorter/smaller than beat shake (0.38)
+            // Diegetic loss line — fires immediately after the beat text.
+            // Timeout lets the beat text settle for 1s before the loss lands.
+            window.setTimeout(() => {
+              useGame.getState().showBeat("Something shifts in the back. You hear it.");
+            }, 1200);
           }
         }
       }
@@ -80,8 +87,10 @@ export default function StoryWatcher() {
       const { cargoSecured, cargoTotal, endRun } = useGame.getState();
       let variant: "clean" | "partial" | "failed";
       if (cargoSecured >= cargoTotal)      variant = "clean";
-      else if (cargoSecured > 0)           variant = "partial";
+      else if (cargoSecured > 1)           variant = "partial";
       else                                 variant = "failed";
+      // Note: cargoSecured can reach 1 (lose all 3 risk beats) → "failed".
+      // cargoSecured=0 is unreachable with 3 risk beats; ≤1 covers the floor.
       endRun(variant);
     }
   });

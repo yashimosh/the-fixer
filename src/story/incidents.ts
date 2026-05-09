@@ -37,7 +37,7 @@ export const CANONICAL_2017: IncidentText = {
     "This one is two: a journalist, and the videographer she works with. She's American. He's not.",
     "The interview is with a woman whose brothers were taken in 2014. She has agreed to a name and a face.",
     "Two camera cases. A satellite phone. Body armour they haven't worn yet. A hard drive of last week's footage.",
-    "Engine on at 04:47. The streets are still empty.",
+    "Engine on at 04:47.",
   ],
 
   // Beats are evenly spread across the 220 m run (SPAWN_Z -100 → END_Z +120).
@@ -56,7 +56,7 @@ export const CANONICAL_2017: IncidentText = {
     },
     {
       triggerZ: -42,
-      text: "Bakhtiyar took an IED in Old City three weeks ago. The videographer is the same age. Same build. You don't mention it.",
+      text: "Bakhtiyar took an IED in Old City three weeks ago. The videographer is the same age. Same build.",
     },
     {
       triggerZ: -10,
