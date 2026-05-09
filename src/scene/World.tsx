@@ -6,7 +6,7 @@
 
 import { Sky } from "@react-three/drei";
 import Truck from "./Truck";
-import Ground from "./Ground";
+import Terrain from "./Terrain";
 import ChaseCamera from "./ChaseCamera";
 
 export default function World() {
@@ -42,8 +42,9 @@ export default function World() {
       {/* Atmospheric depth — pushed out so the ground reads near the truck. */}
       <fog attach="fog" args={["#b4b8b6", 140, 480]} />
 
-      {/* The ground (static rigid body) and the truck (dynamic rigid body). */}
-      <Ground />
+      {/* Heightfield terrain (static) + the truck (dynamic). Both share the
+          same heightAt() function for visual / collision agreement. */}
+      <Terrain />
       <Truck />
 
       {/* Chase camera — follows the truck's chassis transform every frame. */}

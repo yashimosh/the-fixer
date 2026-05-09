@@ -30,6 +30,7 @@ import { RigidBody, CuboidCollider, type RapierRigidBody } from "@react-three/ra
 import { useKeys } from "../input/useKeys";
 import { truckRef } from "./truckRef";
 import { useGame } from "../store";
+import { SPAWN_X, SPAWN_Y, SPAWN_Z } from "./terrainFn";
 
 const ENGINE_FORCE      = 14;
 const STEER_TORQUE      = 5;
@@ -95,7 +96,11 @@ export default function Truck() {
       ref={body}
       colliders={false}
       mass={1800}
-      position={[0, 1.2, 0]}
+      position={[SPAWN_X, SPAWN_Y, SPAWN_Z]}
+      // Face north (truck local -Z is forward; rotate ~ to point along +Z driving direction).
+      // Spawn rotation = 0 means truck faces -Z, but we want it facing +Z (north).
+      // Rotate π around Y so headlights point north.
+      rotation={[0, Math.PI, 0]}
       enabledRotations={[false, true, false]}
     >
       {/* Single cuboid collider sized to the chassis — covers wheels too so
