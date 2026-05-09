@@ -72,5 +72,6 @@ export const SPAWN_Z = -100;
 export const SPAWN_X = trackCenterX(SPAWN_Z);
 export const SPAWN_Y_GROUND = heightAt(SPAWN_X, SPAWN_Z);
 /** y for the truck's RigidBody position — chassis-center height above ground.
- *  Cuboid collider half-height is 0.85 plus a small drop margin. */
-export const SPAWN_Y = SPAWN_Y_GROUND + 1.1;
+ *  Cuboid collider half-height is 0.85; +1.5 gives 0.65 m clearance so the
+ *  truck settles onto the surface without clipping into it on spawn. */
+export const SPAWN_Y = SPAWN_Y_GROUND + 1.5;

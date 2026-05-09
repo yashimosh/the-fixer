@@ -1,19 +1,23 @@
 // Terrain — heightfield mesh + matching Rapier collider.
 //
-// One mesh, one heightfield collider, both built from the same `heightAt`
-// function in terrain.ts. The visual and the physics agree because they
-// sample the exact same data.
+// Physics: colliders="trimesh" on the RigidBody auto-builds Rapier's collision
+// shape directly from the mesh geometry — same vertex buffer as the visual,
+// so visual and physics are guaranteed to agree. HeightfieldCollider was tried
+// first but has a subtle row/column-major convention that's easy to get wrong;
+// trimesh is simpler and just as fast for a single static terrain.
 //
-// Replaces the flat ground plane. Future iteration will switch to chunk
-// streaming so the world can be longer than the active grid; for now a
-// single 240m × 240m grid covers the canonical run.
+// Visual: PlaneGeometry displaced by heightAt per vertex. Flat shading gives
+// the polygonal look consistent with the reference set (Bruno Simon,
+// Over the Hill, Tiny Delivery).
+//
+// Single 240m × 240m grid covers the canonical run. Future iteration switches
+// to chunk streaming once the run needs to be longer than the active grid.
 
 import { useMemo } from "react";
 import * as THREE from "three";
-import { RigidBody, HeightfieldCollider } from "@react-three/rapier";
+import { RigidBody } from "@react-three/rapier";
 import {
   TERRAIN_SIZE,
-  TERRAIN_VERTS,
   TERRAIN_CELLS,
   heightAt,
 } from "./terrainFn";
@@ -21,25 +25,9 @@ import {
 const COL_GROUND = "#a89570"; // warm dawn tan
 
 export default function Terrain() {
-  // Heights array — row-major, length = TERRAIN_VERTS².
-  // Layout: heights[row * VERTS + col] is the height at world (x = colWorld, z = rowWorld).
-  // The Rapier HeightfieldCollider and the visual mesh both use this exact buffer.
-  const heights = useMemo<number[]>(() => {
-    const arr = new Array<number>(TERRAIN_VERTS * TERRAIN_VERTS);
-    for (let i = 0; i < TERRAIN_VERTS; i++) {
-      for (let j = 0; j < TERRAIN_VERTS; j++) {
-        const x = (j / TERRAIN_CELLS - 0.5) * TERRAIN_SIZE;
-        const z = (i / TERRAIN_CELLS - 0.5) * TERRAIN_SIZE;
-        arr[i * TERRAIN_VERTS + j] = heightAt(x, z);
-      }
-    }
-    return arr;
-  }, []);
-
-  // Visual mesh — start from PlaneGeometry (which has correct attributes
-  // including UVs and a proper bounding sphere) and displace its vertices
-  // by sampling heightAt. Less code than a custom BufferGeometry and
-  // avoids the from-scratch frustum-culling pitfalls.
+  // Visual mesh — PlaneGeometry displaced by heightAt per vertex.
+  // PlaneGeometry gives us correct UVs, indices, and a proper bounding sphere
+  // out of the box. We rotate it flat then displace Y.
   const geometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(
       TERRAIN_SIZE, TERRAIN_SIZE,
@@ -63,19 +51,18 @@ export default function Terrain() {
   }, []);
 
   return (
-    <RigidBody type="fixed" colliders={false}>
-      {/* Physics collider — Rapier reads heights array directly. */}
-      <HeightfieldCollider
-        args={[
-          TERRAIN_CELLS,
-          TERRAIN_CELLS,
-          heights,
-          { x: TERRAIN_SIZE, y: 1, z: TERRAIN_SIZE },
-        ]}
-      />
-      {/* Visual mesh — child of the RigidBody (proven pattern matches Truck). */}
+    // colliders="trimesh" — Rapier reads the mesh vertex/index buffer directly.
+    // No separate heights array needed; visual and physics share the same data.
+    // DoubleSide on the material is a safety net: if the camera ever dips below
+    // terrain (e.g. during a big jump) the ground stays visible.
+    <RigidBody type="fixed" colliders="trimesh">
       <mesh geometry={geometry} receiveShadow>
-        <meshStandardMaterial color={COL_GROUND} roughness={1} flatShading />
+        <meshStandardMaterial
+          color={COL_GROUND}
+          roughness={1}
+          flatShading
+          side={THREE.DoubleSide}
+        />
       </mesh>
     </RigidBody>
   );
