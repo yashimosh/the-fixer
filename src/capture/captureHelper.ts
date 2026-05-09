@@ -154,10 +154,11 @@ function setupCapture() {
       const glCanvas = document.querySelector<HTMLCanvasElement>("canvas");
       if (!glCanvas) { reject(new Error("WebGL canvas not found")); return; }
 
-      // Composite canvas — same resolution as the GL canvas
+      // Composite canvas — use CSS display size so HUD coordinates (CSS pixels)
+      // align correctly. drawImage scales the DPR-upscaled GL canvas down to fit.
       const comp = document.createElement("canvas");
-      comp.width  = glCanvas.width  || 1568;
-      comp.height = glCanvas.height || 771;
+      comp.width  = glCanvas.offsetWidth  || 1568;
+      comp.height = glCanvas.offsetHeight || 771;
       const ctx   = comp.getContext("2d");
       if (!ctx) { reject(new Error("2D context unavailable")); return; }
 
@@ -171,13 +172,28 @@ function setupCapture() {
       rec.onstop = () => {
         const blob = new Blob(chunks, { type: "video/webm" });
         const url  = URL.createObjectURL(blob);
-        const a    = document.createElement("a");
-        a.href     = url;
         const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-        a.download = `${filename ?? `fixer-gameplay-${date}`}.webm`;
-        a.click();
-        URL.revokeObjectURL(url);
+        const fname = `${filename ?? `fixer-gameplay-${date}`}.webm`;
+
+        // Expose blob URL on window so it can be manually downloaded if auto-click
+        // is blocked by Chrome's download gate (requires user-gesture context).
+        (window as unknown as Record<string, unknown>).__fixerLastBlobUrl = url;
+        (window as unknown as Record<string, unknown>).__fixerLastFilename = fname;
+        (window as unknown as Record<string, unknown>).__fixerDownload = () => {
+          const a    = document.createElement("a");
+          a.href     = url;
+          a.download = fname;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        };
+
+        // Try auto-download — works if Chrome hasn't blocked it
+        (window as unknown as Record<string, unknown>).__fixerDownload?.();
+
         cancelAnimationFrame(rafId);
+        console.info(`[fixer] Recording complete: ${fname} (${(blob.size / 1024).toFixed(0)} KB)`);
         resolve();
       };
 
@@ -200,11 +216,40 @@ function setupCapture() {
     });
   };
 
+  // __fixerDrive(seconds) — drives forward for the given duration.
+  // Pulses fwd=true in 80ms on / 20ms off bursts to keep speed ~7 m/s
+  // (below cargo-risk threshold of 8 m/s but still covering the track).
+  // After the drive completes, releases all keys.
+  (window as unknown as Record<string, unknown>).__fixerDrive = (seconds: number) => {
+    const keys = (window as unknown as Record<string, unknown>).__fixerKeys as Record<string, boolean> | undefined;
+    if (!keys) { console.error("[fixer] __fixerKeys not ready"); return; }
+
+    let elapsed = 0;
+    const TICK = 100; // ms
+
+    const interval = setInterval(() => {
+      elapsed += TICK;
+      if (elapsed >= seconds * 1000) {
+        keys.fwd = false;
+        clearInterval(interval);
+        return;
+      }
+      // Pulse: 80ms on, 20ms off each 100ms tick → moderate controlled speed
+      keys.fwd = true;
+      setTimeout(() => { if (keys.fwd) keys.fwd = false; }, 80);
+      setTimeout(() => { keys.fwd = true; },                 90);
+    }, TICK);
+
+    console.info(`[fixer] Driving for ${seconds}s…`);
+    return interval;
+  };
+
   (window as unknown as Record<string, unknown>).__fixerRecord = record;
   console.info(
     "[fixer] captureHelper ready.\n" +
-    "  Drive:  window.__fixerKeys.fwd = true\n" +
-    "  Record: window.__fixerRecord(40) — downloads fixer-gameplay-<date>.webm"
+    "  Drive:  window.__fixerDrive(35)          — drives for 35s at ~7 m/s\n" +
+    "  Record: window.__fixerRecord(45)          — downloads fixer-gameplay-<date>.webm\n" +
+    "  Manual: window.__fixerDownload?.()        — trigger download if auto blocked"
   );
 }
 
