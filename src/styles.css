@@ -67,3 +67,59 @@ html, body, #root {
   text-transform: uppercase;
   color: var(--fg-dim);
 }
+
+/* Story card — full-screen narrative overlay for intro and ending. */
+.story-card {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 11, 12, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 700ms ease;
+  z-index: 500;
+}
+.story-card.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+.story-card-inner {
+  max-width: 540px;
+  padding: 0 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.story-card-text p {
+  font-size: 14px;
+  line-height: 1.7;
+  opacity: 0.92;
+  margin-bottom: 14px;
+  letter-spacing: 0.01em;
+}
+.story-card-text p.dateline {
+  font-size: 11px;
+  opacity: 0.5;
+  letter-spacing: 0.18em;
+  margin-bottom: 24px;
+  font-weight: 500;
+}
+.story-card-action {
+  align-self: flex-start;
+  font: inherit;
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(232, 230, 225, 0.3);
+  padding: 10px 22px;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  transition: border-color 200ms, background 200ms;
+}
+.story-card-action:hover {
+  border-color: var(--fg);
+  background: rgba(232, 230, 225, 0.04);
+}

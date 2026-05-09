@@ -29,6 +29,7 @@ import { useFrame } from "@react-three/fiber";
 import { RigidBody, CuboidCollider, type RapierRigidBody } from "@react-three/rapier";
 import { useKeys } from "../input/useKeys";
 import { truckRef } from "./truckRef";
+import { useGame } from "../store";
 
 const ENGINE_FORCE      = 14;
 const STEER_TORQUE      = 5;
@@ -65,6 +66,14 @@ export default function Truck() {
     const rb = body.current;
     if (!rb) return;
     const k = keys.current;
+
+    // Gate input on game phase — engine idles while the story card is up.
+    const phase = useGame.getState().phase;
+    if (phase !== "running") {
+      rb.setLinearDamping(LINEAR_DAMPING);
+      rb.setAngularDamping(ANGULAR_DAMPING);
+      return;
+    }
 
     rb.setLinearDamping(k.brake ? BRAKE_DAMPING_X10 : LINEAR_DAMPING);
     rb.setAngularDamping(ANGULAR_DAMPING);

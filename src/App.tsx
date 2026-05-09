@@ -11,6 +11,7 @@ import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
 import World from "./scene/World";
 import HUD from "./ui/HUD";
+import StoryCard from "./ui/StoryCard";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
             powerPreference: "high-performance",
             stencil: false,
             depth: true,
+            preserveDrawingBuffer: true, // helps screenshot capture in headless tools
           }}
           dpr={[1, 1.75]} // device pixel ratio cap; matches Border Run's perf budget
         >
@@ -33,8 +35,9 @@ export default function App() {
         </Canvas>
       </div>
 
-      {/* React-DOM UI siblings of the Canvas. */}
+      {/* React-DOM UI siblings of the Canvas. Order matters for stacking. */}
       <HUD />
+      <StoryCard />
     </>
   );
 }
