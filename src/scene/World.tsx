@@ -12,21 +12,21 @@ import ChaseCamera from "./ChaseCamera";
 export default function World() {
   return (
     <>
-      {/* Sky — Preetham atmospheric scattering. Low sun = dawn register. */}
+      {/* Sky — Preetham atmospheric scattering. Sun low + slightly side-on. */}
       <Sky
-        sunPosition={[100, 12, 80]}
+        sunPosition={[40, 8, -60]}
         turbidity={4.5}
         rayleigh={1.6}
         mieCoefficient={0.006}
         mieDirectionalG={0.86}
       />
 
-      {/* Lighting — dawn. Cool ambient, warm directional. */}
-      <hemisphereLight args={["#88928a", "#2a2a20", 0.32]} />
+      {/* Lighting — dawn. Cool ambient, warm directional grazing the truck side-on. */}
+      <hemisphereLight args={["#a3a89e", "#3a3326", 0.55]} />
       <directionalLight
-        position={[100, 70, 80]}
-        intensity={1.6}
-        color="#ffd9a8"
+        position={[40, 30, -60]}
+        intensity={2.2}
+        color="#ffd1a0"
         castShadow
         shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-80}
@@ -39,8 +39,8 @@ export default function World() {
         shadow-normalBias={0.02}
       />
 
-      {/* Atmospheric depth — colour anchored to dawn grey-blue, not generic black. */}
-      <fog attach="fog" args={["#a8b0b8", 80, 360]} />
+      {/* Atmospheric depth — pushed out so the ground reads near the truck. */}
+      <fog attach="fog" args={["#b4b8b6", 140, 480]} />
 
       {/* The ground (static rigid body) and the truck (dynamic rigid body). */}
       <Ground />

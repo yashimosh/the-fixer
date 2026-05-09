@@ -9,8 +9,8 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Vector3, Quaternion } from "three";
 import { truckRef } from "./truckRef";
 
-const OFFSET_LOCAL = new Vector3(0, 5.5, 11);    // behind and above the truck (truck local +Z is forward)
-const LOOK_OFFSET  = new Vector3(0, 1.5, 0);     // look slightly above the truck
+const OFFSET_LOCAL = new Vector3(0, 6.5, 12);    // behind and above the truck
+const LOOK_OFFSET  = new Vector3(0, 2.2, 0);     // look slightly above the truck — frames the sky
 const FOLLOW_LERP  = 4.5;                        // higher = snappier follow
 const LOOK_LERP    = 6.0;
 

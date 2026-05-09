@@ -10,7 +10,8 @@ export default function Ground() {
       <CuboidCollider args={[200, 0.1, 200]} />
       <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color="#7a6f55" roughness={1} />
+        {/* Warm dawn-ground tan, not cold mud. Reads with the sky. */}
+        <meshStandardMaterial color="#a89570" roughness={1} />
       </mesh>
     </RigidBody>
   );
