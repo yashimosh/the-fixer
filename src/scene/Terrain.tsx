@@ -67,29 +67,36 @@ export default function Terrain() {
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geo.setIndex(indices);
     geo.computeVertexNormals();
+    // Compute bounds — without these, R3F's frustum culling treats the
+    // mesh as a zero-volume point at origin and culls it whenever the
+    // origin isn't in view, which makes the terrain invisible in chase cam.
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
     return geo;
   }, [heights]);
 
   return (
-    <RigidBody type="fixed" colliders={false}>
-      {/* Heightfield collider — Rapier samples the same heights array.
-          nrows = ncols = TERRAIN_CELLS (cells, not vertices).
-          Scale.y = 1 means heights are in metres, no vertical scaling. */}
-      <HeightfieldCollider
-        args={[
-          TERRAIN_CELLS,
-          TERRAIN_CELLS,
-          heights,
-          { x: TERRAIN_SIZE, y: 1, z: TERRAIN_SIZE },
-        ]}
-      />
+    <>
+      {/* Physics collider — Rapier-side only, no visual.
+          Wrapped in a fixed RigidBody so the heightfield is static.
+          NB: RigidBody can affect children's transforms in @react-three/rapier;
+          we keep the visual mesh OUTSIDE this body to avoid that quirk. */}
+      <RigidBody type="fixed" colliders={false}>
+        <HeightfieldCollider
+          args={[
+            TERRAIN_CELLS,
+            TERRAIN_CELLS,
+            heights,
+            { x: TERRAIN_SIZE, y: 1, z: TERRAIN_SIZE },
+          ]}
+        />
+      </RigidBody>
 
-      {/* Visual mesh — flat-shaded for the stylized faceted look that reads
-          well from the chase-cam distance. Receives shadow only (terrain
-          casts shadow on itself anyway through the directional light). */}
+      {/* Visual mesh — independent of physics. Same geometry data, rendered
+          directly. Flat-shaded for the stylized faceted look. */}
       <mesh geometry={geometry} receiveShadow>
         <meshStandardMaterial color={COL_GROUND} roughness={1} flatShading />
       </mesh>
-    </RigidBody>
+    </>
   );
 }

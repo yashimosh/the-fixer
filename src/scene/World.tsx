@@ -22,21 +22,21 @@ export default function World() {
       />
 
       {/* Lighting — dawn. Cool ambient, warm directional grazing the truck side-on. */}
-      <hemisphereLight args={["#a3a89e", "#3a3326", 0.55]} />
+      <hemisphereLight args={["#a3a89e", "#3a3326", 0.7]} />
       <directionalLight
-        position={[40, 30, -60]}
+        position={[60, 50, -40]}
         intensity={2.2}
         color="#ffd1a0"
         castShadow
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-80}
-        shadow-camera-right={80}
-        shadow-camera-top={80}
-        shadow-camera-bottom={-80}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-200}
+        shadow-camera-right={200}
+        shadow-camera-top={200}
+        shadow-camera-bottom={-200}
         shadow-camera-near={1}
-        shadow-camera-far={400}
+        shadow-camera-far={600}
         shadow-bias={-0.0003}
-        shadow-normalBias={0.02}
+        shadow-normalBias={0.04}
       />
 
       {/* Atmospheric depth — pushed out so the ground reads near the truck. */}
