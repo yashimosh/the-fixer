@@ -36,67 +36,47 @@ export default function Terrain() {
     return arr;
   }, []);
 
-  // Visual mesh — custom BufferGeometry built from the same heights so the
-  // collision surface and the rendered surface are identical (no z-fighting,
-  // no truck-floats-above or truck-clips-into surprises).
+  // Visual mesh — start from PlaneGeometry (which has correct attributes
+  // including UVs and a proper bounding sphere) and displace its vertices
+  // by sampling heightAt. Less code than a custom BufferGeometry and
+  // avoids the from-scratch frustum-culling pitfalls.
   const geometry = useMemo(() => {
-    const positions = new Float32Array(TERRAIN_VERTS * TERRAIN_VERTS * 3);
-    for (let i = 0; i < TERRAIN_VERTS; i++) {
-      for (let j = 0; j < TERRAIN_VERTS; j++) {
-        const idx = (i * TERRAIN_VERTS + j) * 3;
-        const x = (j / TERRAIN_CELLS - 0.5) * TERRAIN_SIZE;
-        const z = (i / TERRAIN_CELLS - 0.5) * TERRAIN_SIZE;
-        positions[idx + 0] = x;
-        positions[idx + 1] = heights[i * TERRAIN_VERTS + j];
-        positions[idx + 2] = z;
-      }
+    const geo = new THREE.PlaneGeometry(
+      TERRAIN_SIZE, TERRAIN_SIZE,
+      TERRAIN_CELLS, TERRAIN_CELLS,
+    );
+    // PlaneGeometry lies in the XY plane (faces +Z). Rotate to lie in XZ
+    // (faces +Y up) BEFORE displacing so the sampled height goes to world Y.
+    geo.rotateX(-Math.PI / 2);
+
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      pos.setY(i, heightAt(x, z));
     }
-    const indices: number[] = [];
-    for (let i = 0; i < TERRAIN_CELLS; i++) {
-      for (let j = 0; j < TERRAIN_CELLS; j++) {
-        const a = i * TERRAIN_VERTS + j;
-        const b = a + 1;
-        const c = a + TERRAIN_VERTS;
-        const d = c + 1;
-        // Two triangles per quad. Winding order matters for backface culling.
-        indices.push(a, c, b);
-        indices.push(b, c, d);
-      }
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geo.setIndex(indices);
+    pos.needsUpdate = true;
     geo.computeVertexNormals();
-    // Compute bounds — without these, R3F's frustum culling treats the
-    // mesh as a zero-volume point at origin and culls it whenever the
-    // origin isn't in view, which makes the terrain invisible in chase cam.
     geo.computeBoundingBox();
     geo.computeBoundingSphere();
     return geo;
-  }, [heights]);
+  }, []);
 
   return (
-    <>
-      {/* Physics collider — Rapier-side only, no visual.
-          Wrapped in a fixed RigidBody so the heightfield is static.
-          NB: RigidBody can affect children's transforms in @react-three/rapier;
-          we keep the visual mesh OUTSIDE this body to avoid that quirk. */}
-      <RigidBody type="fixed" colliders={false}>
-        <HeightfieldCollider
-          args={[
-            TERRAIN_CELLS,
-            TERRAIN_CELLS,
-            heights,
-            { x: TERRAIN_SIZE, y: 1, z: TERRAIN_SIZE },
-          ]}
-        />
-      </RigidBody>
-
-      {/* Visual mesh — independent of physics. Same geometry data, rendered
-          directly. Flat-shaded for the stylized faceted look. */}
+    <RigidBody type="fixed" colliders={false}>
+      {/* Physics collider — Rapier reads heights array directly. */}
+      <HeightfieldCollider
+        args={[
+          TERRAIN_CELLS,
+          TERRAIN_CELLS,
+          heights,
+          { x: TERRAIN_SIZE, y: 1, z: TERRAIN_SIZE },
+        ]}
+      />
+      {/* Visual mesh — child of the RigidBody (proven pattern matches Truck). */}
       <mesh geometry={geometry} receiveShadow>
         <meshStandardMaterial color={COL_GROUND} roughness={1} flatShading />
       </mesh>
-    </>
+    </RigidBody>
   );
 }
