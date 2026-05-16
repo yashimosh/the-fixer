@@ -54,6 +54,15 @@ export default function World() {
         shadow-normalBias={0.04}
       />
 
+      {/* Fill light — cool west-side sky bounce. Illuminates surfaces the sun
+          can't reach (south-facing walls, truck undercarriage). Low intensity
+          so it reads as ambient sky reflection, not a second sun. No shadows. */}
+      <directionalLight
+        position={[-80, 25, -60]}
+        intensity={0.55}
+        color="#99aacc"
+      />
+
       {/* Atmospheric depth — warm dust haze. Color matches the dawn horizon
           so the distance fades to a convincing Mosul haze rather than cold grey. */}
       <fog attach="fog" args={["#c8b89a", 120, 420]} />

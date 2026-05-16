@@ -82,7 +82,7 @@ export const CANONICAL_2017: IncidentText = {
     clean: [
       "JUNE 2017 — AFTER",
       "You drop them at the Divan. They fly Friday.",
-      "The piece runs in three weeks. Six pages, color photographs, the names of the brothers in the captions. People read the names.",
+      "The piece runs in three weeks. Six pages, color photographs. The brothers are named in the captions.",
       "You drive home to Ankawa.",
       "The phone rings at 02:00 on Sunday. Another one is in tonight.",
     ],
