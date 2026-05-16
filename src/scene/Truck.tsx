@@ -81,6 +81,13 @@ export default function Truck() {
   // Current steer angle — lerped toward target each frame for smooth visual.
   const steerAngle = useRef(0);
 
+  // Body roll — visual lean of the truck body when cornering.
+  // Derived from angular velocity (yaw rate) × speed → roll angle.
+  // Applied to a wrapper group around all mesh children; physics stays flat.
+  // Max lean ~6° (0.105 rad) — Land Cruiser has a high centre of gravity.
+  const bodyGroup  = useRef<Group>(null);
+  const rollAngle  = useRef(0);
+
   useEffect(() => {
     truckRef.current = body.current;
     return () => { truckRef.current = null; };
@@ -148,6 +155,14 @@ export default function Truck() {
     steerAngle.current += (steerTarget - steerAngle.current) * Math.min(1, dt * 8);
     if (sFL.current) sFL.current.rotation.y = steerAngle.current;
     if (sFR.current) sFR.current.rotation.y = steerAngle.current;
+
+    // Body roll — lean into corners proportional to yaw rate × speed.
+    // angvel.y = yaw rate (rad/s). Roll opposes yaw: left turn → roll right (+Z).
+    // Scale: 0.018 tuned so full-speed hard turn gives ~6° lean.
+    const angvel = rb.angvel();
+    const rollTarget = -angvel.y * speed * 0.018;
+    rollAngle.current += (rollTarget - rollAngle.current) * Math.min(1, dt * 5);
+    if (bodyGroup.current) bodyGroup.current.rotation.z = rollAngle.current;
   });
 
   return (
@@ -165,6 +180,10 @@ export default function Truck() {
       {/* Single cuboid collider sized to the chassis — covers wheels too so
           the truck rolls on its wheels without per-wheel physics. */}
       <CuboidCollider args={[0.95, 0.85, 2.25]} />
+
+      {/* ── Body roll wrapper — rotation.z driven by angvel × speed ──────
+          Physics collider stays flat; only visual meshes lean into corners. */}
+      <group ref={bodyGroup}>
 
       {/* ── Chassis lower body — full length, sits between the wheels ─── */}
       <mesh castShadow position={[0, -0.05, 0]}>
@@ -252,6 +271,8 @@ export default function Truck() {
       {/* Rear wheels — no steer group; position directly */}
       <Wheel position={[-TRACK_WIDTH / 2, -0.5,  WHEELBASE / 2]} spinRef={wRL} />
       <Wheel position={[ TRACK_WIDTH / 2, -0.5,  WHEELBASE / 2]} spinRef={wRR} />
+
+      </group>{/* end bodyGroup */}
     </RigidBody>
   );
 }

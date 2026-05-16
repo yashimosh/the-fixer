@@ -56,7 +56,7 @@ export const CANONICAL_2017: IncidentText = {
     },
     {
       triggerZ: -42,
-      text: "Bakhtiyar took an IED in Old City three weeks ago. The videographer is the same age. Same build.",
+      text: "Bakhtiyar took an IED in Old City three weeks ago. He'd been back a year — sniper in Fallujah, returned anyway. The videographer is the same age. Same build.",
     },
     {
       triggerZ: -10,
