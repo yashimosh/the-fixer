@@ -9,6 +9,8 @@ import Truck from "./Truck";
 import Terrain from "./Terrain";
 import ChaseCamera from "./ChaseCamera";
 import EngineAudio from "./EngineAudio";
+import AmbientAudio from "./AmbientAudio";
+import Scenery from "./Scenery";
 
 export default function World() {
   return (
@@ -53,6 +55,7 @@ export default function World() {
       {/* Heightfield terrain (static) + the truck (dynamic). Both share the
           same heightAt() function for visual / collision agreement. */}
       <Terrain />
+      <Scenery />
       <Truck />
 
       {/* Chase camera — follows the truck's chassis transform every frame. */}
@@ -60,6 +63,10 @@ export default function World() {
 
       {/* Procedural engine audio — pitches with truck velocity. */}
       <EngineAudio />
+
+      {/* Ambient environmental audio — wind texture + distant low rumble.
+          Room tone only: should be felt, not noticed. */}
+      <AmbientAudio />
     </>
   );
 }
