@@ -74,8 +74,11 @@ export const SPAWN_Z = -100;
 export const SPAWN_X = trackCenterX(SPAWN_Z);
 export const SPAWN_Y_GROUND = heightAt(SPAWN_X, SPAWN_Z);
 /** y for the truck's RigidBody position — chassis-center height above ground.
- *  Cuboid collider half-height is 0.85. At -18 gravity (2× real) the truck
- *  falls faster on the first frame, so clearance raised from +1.5 to +3.0 to
- *  prevent tunneling through the trimesh on spawn. CCD is also enabled on the
- *  RigidBody as a second defence layer (Truck.tsx). */
-export const SPAWN_Y = SPAWN_Y_GROUND + 3.0;
+ *  With the Rapier RaycastVehicleController, the chassis collider sits ABOVE
+ *  the wheels (position [0, 0.45, 0] inside the RigidBody, half-height 0.45).
+ *  Wheel suspension rest length is 0.42m, hub at chassis-local Y = -0.35.
+ *  So the bottom of the wheels is at chassis_y + (-0.35) + (-0.42) - WHEEL_R
+ *  = chassis_y - 1.19m below the rigid body origin.
+ *  Spawning the body at ground + 1.8m puts the wheels ~0.6m above ground so
+ *  the suspension can settle naturally on first contact. */
+export const SPAWN_Y = SPAWN_Y_GROUND + 1.8;

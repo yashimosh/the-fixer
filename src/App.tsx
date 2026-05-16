@@ -68,7 +68,7 @@ export default function App() {
           }}
           dpr={[1, 1.75]} // device pixel ratio cap; matches Border Run's perf budget
         >
-          <Physics gravity={[0, -14, 0]} timeStep="vary">
+          <Physics gravity={[0, -12, 0]} timeStep="vary">
             <World />
             {/* Reads truck z each frame, fires beats and the ending. */}
             <StoryWatcher />

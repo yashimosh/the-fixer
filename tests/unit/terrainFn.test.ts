@@ -31,9 +31,13 @@ describe('terrainFn — constants', () => {
     expect(SPAWN_Z).toBe(-100);
   });
 
-  it('SPAWN_Y gives the truck 1.5m clearance above ground at spawn', () => {
+  it('SPAWN_Y gives the truck enough clearance for the raycast vehicle to settle', () => {
+    // With the RaycastVehicleController (post Bruno-Simon rewrite), the chassis
+    // sits above the wheels and the suspension has ~0.42m of rest travel.
+    // Spawn clearance bumped to 1.8m so wheels hover ~0.6m above ground and
+    // the suspension can compress naturally on first contact.
     const clearance = SPAWN_Y - SPAWN_Y_GROUND;
-    expect(clearance).toBeCloseTo(1.5, 2);
+    expect(clearance).toBeCloseTo(1.8, 2);
   });
 });
 
