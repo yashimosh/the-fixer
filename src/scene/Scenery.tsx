@@ -145,7 +145,7 @@ export default function Scenery() {
 
       // ── Wall slab ─────────────────────────────────────────────────────
       if (type < 0.45) {
-        const dist = 14 + rng() * 28;       // 14–42 m from track
+        const dist = 8 + rng() * 22;        // 8–30 m from track (was 14–42)
         const x    = cx + side * dist;
         const w    = 0.3 + rng() * 0.35;    // wall thickness 0.3–0.65 m
         const h    = 2.2 + rng() * 2.8;     // height 2.2–5 m
@@ -169,7 +169,7 @@ export default function Scenery() {
 
       // ── Rubble pile ───────────────────────────────────────────────────
       else if (type < 0.80) {
-        const dist   = 12 + rng() * 22;
+        const dist   = 7 + rng() * 16;      // 7–23 m from track (was 12–34)
         const cx2    = cx + side * dist;
         const chunks: RubbleChunkProps[] = [];
         const count  = 3 + Math.floor(rng() * 4);  // 3–6 chunks per pile
@@ -193,7 +193,7 @@ export default function Scenery() {
 
       // ── Burnt husk ────────────────────────────────────────────────────
       else {
-        const dist = 18 + rng() * 25;
+        const dist = 12 + rng() * 20;       // 12–32 m from track (was 18–43)
         const x    = cx + side * dist;
         husks.push({ x, z, rotY: rng() * Math.PI * 2 });
       }

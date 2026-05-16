@@ -90,6 +90,14 @@ export default function Truck() {
   const bodyGroup  = useRef<Group>(null);
   const rollAngle  = useRef(0);
 
+  // Visual jounce — pseudo-suspension. Compresses the body down on hard
+  // landings (vy spike) and bounces back. Derived from vertical velocity
+  // delta; positive vy change (landing) = compress down (negative Y offset).
+  // Max compression ~0.18m. Gives the truck organic life without a real
+  // vehicle controller. From Border Run landing shake concept.
+  const jounce     = useRef(0);
+  const prevVy     = useRef(0);
+
   useEffect(() => {
     truckRef.current = body.current;
     return () => { truckRef.current = null; };
@@ -164,7 +172,25 @@ export default function Truck() {
     const angvel = rb.angvel();
     const rollTarget = -angvel.y * speed * 0.018;
     rollAngle.current += (rollTarget - rollAngle.current) * Math.min(1, dt * 5);
-    if (bodyGroup.current) bodyGroup.current.rotation.z = rollAngle.current;
+
+    // Visual jounce — pseudo-suspension bounce.
+    // When vy drops sharply (landing after a bump), compress the body down.
+    // Then spring back. vy is current vertical velocity; vyDrop is how much
+    // it dropped this frame (positive = falling → landing).
+    const vy = vel.y;
+    const vyDrop = prevVy.current - vy;  // positive when vy decreases (falling)
+    prevVy.current = vy;
+    // Compress proportional to impact — capped at -0.18m
+    if (vyDrop > 2) {
+      jounce.current = Math.max(-0.18, jounce.current - vyDrop * 0.016);
+    }
+    // Always spring back to 0 at 6x/s
+    jounce.current += (0 - jounce.current) * Math.min(1, dt * 6);
+
+    if (bodyGroup.current) {
+      bodyGroup.current.rotation.z = rollAngle.current;
+      bodyGroup.current.position.y = jounce.current;
+    }
   });
 
   return (
