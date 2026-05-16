@@ -20,9 +20,15 @@ import {
   TERRAIN_SIZE,
   TERRAIN_CELLS,
   heightAt,
+  trackCenterX,
 } from "./terrainFn";
 
-const COL_GROUND = "#a89570"; // warm dawn tan
+// Vertex colour palette — three zones blend by distance from track centre.
+// Flat shading means each tri face gets the average of its three vertices,
+// which naturally smooths the colour gradient without extra work.
+const C_TRACK = new THREE.Color("#7a6a54");  // compressed dirt / tarmac remnant
+const C_SAND  = new THREE.Color("#a89570");  // mid-slope warm sand
+const C_DUST  = new THREE.Color("#c4b898");  // pale distant dust / rock
 
 export default function Terrain() {
   // Visual mesh — PlaneGeometry displaced by heightAt per vertex.
@@ -38,11 +44,39 @@ export default function Terrain() {
     geo.rotateX(-Math.PI / 2);
 
     const pos = geo.attributes.position;
+
+    // Vertex colours — allocated before we read position so the buffer is
+    // the same length as the position attribute.
+    const colours = new Float32Array(pos.count * 3);
+
+    const tmp = new THREE.Color();
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const z = pos.getZ(i);
       pos.setY(i, heightAt(x, z));
+
+      // Distance from the carved track centreline determines colour zone.
+      const dist = Math.abs(x - trackCenterX(z));
+
+      // 0–4 m  → compressed track (C_TRACK)
+      // 4–18 m → blend to sand (C_SAND)
+      // 18+ m  → blend to pale dust (C_DUST)
+      if (dist < 4) {
+        tmp.copy(C_TRACK);
+      } else if (dist < 18) {
+        const t = (dist - 4) / 14;          // 0 at edge of track, 1 at 18m
+        tmp.copy(C_TRACK).lerp(C_SAND, t);
+      } else {
+        const t = Math.min(1, (dist - 18) / 20); // 0 at 18m, 1 at 38m+
+        tmp.copy(C_SAND).lerp(C_DUST, t);
+      }
+
+      colours[i * 3]     = tmp.r;
+      colours[i * 3 + 1] = tmp.g;
+      colours[i * 3 + 2] = tmp.b;
     }
+
+    geo.setAttribute("color", new THREE.BufferAttribute(colours, 3));
     pos.needsUpdate = true;
     geo.computeVertexNormals();
     geo.computeBoundingBox();
@@ -58,7 +92,7 @@ export default function Terrain() {
     <RigidBody type="fixed" colliders="trimesh">
       <mesh geometry={geometry} receiveShadow>
         <meshStandardMaterial
-          color={COL_GROUND}
+          vertexColors
           roughness={1}
           flatShading
           side={THREE.DoubleSide}
