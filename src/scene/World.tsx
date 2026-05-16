@@ -11,6 +11,7 @@ import ChaseCamera from "./ChaseCamera";
 import EngineAudio from "./EngineAudio";
 import AmbientAudio from "./AmbientAudio";
 import Scenery from "./Scenery";
+import PostFX from "./PostFX";
 
 export default function World() {
   return (
@@ -64,8 +65,9 @@ export default function World() {
       />
 
       {/* Atmospheric depth — warm dust haze. Color matches the dawn horizon
-          so the distance fades to a convincing Mosul haze rather than cold grey. */}
-      <fog attach="fog" args={["#c8b89a", 120, 420]} />
+          so the distance fades to a convincing Mosul haze rather than cold grey.
+          Near reduced to 80m: wall slabs and husks pop in with more drama. */}
+      <fog attach="fog" args={["#c8b89a", 80, 380]} />
 
       {/* Heightfield terrain (static) + the truck (dynamic). Both share the
           same heightAt() function for visual / collision agreement. */}
@@ -82,6 +84,9 @@ export default function World() {
       {/* Ambient environmental audio — wind texture + distant low rumble.
           Room tone only: should be felt, not noticed. */}
       <AmbientAudio />
+
+      {/* Post-processing — bloom on emissive headlights + vignette frame. */}
+      <PostFX />
     </>
   );
 }

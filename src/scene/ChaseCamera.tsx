@@ -2,77 +2,111 @@
 // from the shared truckRef and lerps the active camera toward an offset behind
 // and above the truck.
 //
-// R3F's default camera is what gets controlled here (the one configured on
-// <Canvas camera={...} />). useThree gives us the live camera reference.
+// Feel reference: Bruno Simon, Border Run.
+//
+// Improvements over v1:
+//   - Speed-based FOV: widens from 60° to 74° at full speed. The world rushes
+//     past when you floor it. Tightens again when you brake.
+//   - Landing shake: detects vy sign flip + magnitude to trigger a camera jolt
+//     when the truck bottoms out on terrain. Separate from beat shake.
+//   - Tighter FOLLOW_LERP (6.5 vs 4.5): camera is more glued to the truck,
+//     matching the responsive feel of Bruno Simon's camera.
+//   - Camera offset is rotated by full truck quaternion (not just yaw), so the
+//     camera tilts when the truck pitches over a crest.
 
+import { useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Vector3, Quaternion } from "three";
+import { Vector3, Quaternion, PerspectiveCamera } from "three";
 import { truckRef } from "./truckRef";
 import { shake } from "./shakeRef";
 
-// Both offsets are in truck-LOCAL space. OFFSET_LOCAL applied via quaternion
-// gives camera position; LOOK_LOCAL applied via quaternion gives look target.
-// Truck local axes after spawn rotation (π around Y):
-//   local -Z = world +Z = forward (truck drives in world +Z)
-//   local +Z = world -Z = backward (where the camera sits)
-//   local +Y = world +Y = up
-// Camera sits 11m behind the truck, 3.5m above its centre.
-// Look target is 8m ahead, 2m BELOW truck centre — this points at the
-// terrain surface ahead of the truck so the terrain fills most of the frame
-// with sky showing as a strip at the top. Reference: Over the Hill, Bruno Simon.
-const OFFSET_LOCAL = new Vector3(0, 3.5, 11);
-const LOOK_LOCAL   = new Vector3(0, -2.0, -8);
-const FOLLOW_LERP  = 4.5;
-const LOOK_LERP    = 6.0;
+// Camera sits 11m behind the truck, 4m above.
+// Look target is 7m ahead, 1.5m above ground level — keeps terrain in shot
+// while showing sky at top. Reference: Over the Hill, Bruno Simon.
+const OFFSET_LOCAL  = new Vector3(0, 4.0, 11);
+const LOOK_LOCAL    = new Vector3(0, -1.5, -7);
+const FOLLOW_LERP   = 6.5;   // pos lerp rate (was 4.5 — tighter = more glued)
+// LOOK_LERP reserved — lookAt() applied directly each frame is smooth enough
+// const LOOK_LERP     = 7.0;
 
-// Reused work vectors to avoid GC pressure each frame.
-const _desiredPos = new Vector3();
-const _truckPos   = new Vector3();
-const _truckQuat  = new Quaternion();
-const _lookTarget = new Vector3();
-const _camLook    = new Vector3();
+const FOV_BASE      = 60;    // degrees at rest
+const FOV_MAX       = 74;    // degrees at MAX_SPEED
+const FOV_MAX_SPEED = 11;    // m/s at which FOV peaks
+const FOV_LERP      = 3.5;   // how quickly FOV tracks speed changes
+
+// Landing shake: when vy (downward velocity) drops by more than this between
+// frames, trigger a camera jolt. 4 m/s delta is a noticeable bump on terrain.
+const LAND_VY_THRESHOLD = 3.5;
+const LAND_SHAKE_MAG    = 0.18;  // slightly bigger than beat shake (0.12)
+const LAND_SHAKE_DUR    = 0.25;  // seconds
+
+// Reused work vectors — avoid GC pressure each frame.
+const _desiredPos  = new Vector3();
+const _truckPos    = new Vector3();
+const _truckQuat   = new Quaternion();
+const _lookTarget  = new Vector3();
 
 export default function ChaseCamera() {
   const { camera } = useThree();
+  const prevVy    = useRef(0);
+  const landShake = useRef(0);   // countdown timer for landing shake
 
   useFrame((_, dt) => {
     const rb = truckRef.current;
     if (!rb) return;
 
-    // Truck transform from physics
+    // ── Truck transform ──────────────────────────────────────────────────
     const tp = rb.translation();
     const tq = rb.rotation();
     _truckPos.set(tp.x, tp.y, tp.z);
     _truckQuat.set(tq.x, tq.y, tq.z, tq.w);
 
-    // Desired camera position: truck position + (offset rotated by truck yaw)
+    // ── Landing shake detection ──────────────────────────────────────────
+    // Detect when vy goes from negative (falling) to near-zero (landed).
+    // The larger the vy drop, the harder the landing.
+    const vy = rb.linvel().y;
+    if (prevVy.current < -LAND_VY_THRESHOLD && vy > prevVy.current) {
+      // Just landed — trigger landing shake proportional to impact
+      const impact = Math.min(1, -prevVy.current / 8);
+      landShake.current = LAND_SHAKE_DUR * impact;
+    }
+    prevVy.current = vy;
+
+    // ── Camera position: offset rotated by FULL truck quaternion ─────────
+    // (includes pitch over crests, not just yaw). Camera tilts with the truck.
     _desiredPos.copy(OFFSET_LOCAL).applyQuaternion(_truckQuat).add(_truckPos);
 
-    // Lerp camera toward desired position. Smoothing factor 1 - exp(-k*dt)
-    // is frame-rate independent (works the same at 30fps or 144fps).
     const posK = 1 - Math.exp(-FOLLOW_LERP * dt);
     camera.position.lerp(_desiredPos, posK);
 
-    // Look target: truck position + LOOK_LOCAL rotated by truck yaw.
-    // Points 10m ahead of the truck so the driver sees what's coming.
+    // ── Look target ──────────────────────────────────────────────────────
     _lookTarget.copy(LOOK_LOCAL).applyQuaternion(_truckQuat).add(_truckPos);
-    _camLook.copy(_lookTarget);
-    const lookK = 1 - Math.exp(-LOOK_LERP * dt);
-    // Decompose camera's current forward direction to estimate where it
-    // currently looks, then lerp to the new target. Simpler: just look at
-    // the lerped target directly each frame; it's smooth enough.
     camera.lookAt(_lookTarget);
 
-    // ── Beat shake — small world-space jolt when a story beat fires ────
+    // ── Speed-based FOV ──────────────────────────────────────────────────
+    // Measure planar speed (XZ plane) — matches what we show in HUD.
+    const lv = rb.linvel();
+    const planarSpeed = Math.sqrt(lv.x * lv.x + lv.z * lv.z);
+    const fovTarget = FOV_BASE + Math.min(1, planarSpeed / FOV_MAX_SPEED) * (FOV_MAX - FOV_BASE);
+    const cam = camera as PerspectiveCamera;
+    cam.fov += (fovTarget - cam.fov) * Math.min(1, FOV_LERP * dt);
+    cam.updateProjectionMatrix();
+
+    // ── Beat shake (story events) ────────────────────────────────────────
     if (shake.countdown > 0) {
       shake.countdown = Math.max(0, shake.countdown - dt);
-      const mag = 0.12 * (shake.countdown / 0.38); // fades as countdown falls
+      const mag = 0.12 * (shake.countdown / 0.38);
       camera.position.x += (Math.random() - 0.5) * mag;
       camera.position.y += (Math.random() - 0.5) * mag * 0.4;
     }
 
-    void _camLook;
-    void lookK;
+    // ── Landing shake ────────────────────────────────────────────────────
+    if (landShake.current > 0) {
+      landShake.current = Math.max(0, landShake.current - dt);
+      const mag = LAND_SHAKE_MAG * (landShake.current / LAND_SHAKE_DUR);
+      camera.position.x += (Math.random() - 0.5) * mag;
+      camera.position.y += (Math.random() - 0.5) * mag * 0.6;
+    }
   });
 
   return null;

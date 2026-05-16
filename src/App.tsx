@@ -63,12 +63,12 @@ export default function App() {
           // linear RGB that reads as washed-out grey in the browser.
           onCreated={({ gl }) => {
             gl.toneMapping = ACESFilmicToneMapping;
-            gl.toneMappingExposure = 0.9;
+            gl.toneMappingExposure = 1.1;  // slightly brighter base; bloom adds punch on top
             gl.outputColorSpace = SRGBColorSpace;
           }}
           dpr={[1, 1.75]} // device pixel ratio cap; matches Border Run's perf budget
         >
-          <Physics gravity={[0, -9.81, 0]} timeStep="vary">
+          <Physics gravity={[0, -18, 0]} timeStep="vary">
             <World />
             {/* Reads truck z each frame, fires beats and the ending. */}
             <StoryWatcher />

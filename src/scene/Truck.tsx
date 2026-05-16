@@ -36,16 +36,18 @@ import { SPAWN_X, SPAWN_Y, SPAWN_Z } from "./terrainFn";
 // Max visual steer angle (radians) — ~25°. Matches plausible Land Cruiser lock.
 const MAX_STEER_ANGLE = 0.44;
 
-// Physics feel — a 70-series Land Cruiser on rough mountain roads.
-// Higher LINEAR_DAMPING makes terrain resistance tangible (hills slow you,
-// flat hardpack lets you build speed). STEER_TORQUE is deliberately lower
-// than arcade — the truck needs speed before it turns crisply.
-const ENGINE_FORCE      = 24;    // higher to punch through new damping
-const STEER_TORQUE      = 3.2;   // less snap; wide turns need planning
-const LINEAR_DAMPING    = 1.6;   // terrain resistance; limits top speed
-const ANGULAR_DAMPING   = 4.5;   // steering corrects quickly; no endless spin
-const BRAKE_DAMPING_X10 = 10.0;  // firm braking
-const MAX_SPEED         = 11;    // m/s ≈ 40 km/h; correct off-road top speed
+// Physics feel — tuned against Border Run reference.
+// Gravity is -18 (set in App.tsx Physics component — 1.8× real).
+// More gravity = snappier landings, more planted feel on terrain.
+// ENGINE_FORCE raised to match: at -18g the truck needs more punch to
+// accelerate at the same rate (more normal force = more rolling resistance).
+// STEER_TORQUE unchanged — wide turns still require commitment.
+const ENGINE_FORCE      = 42;    // was 24 — punchy enough to feel responsive
+const STEER_TORQUE      = 4.0;   // was 3.2 — slightly snappier steering
+const LINEAR_DAMPING    = 1.4;   // was 1.6 — slightly less drag, higher top speed
+const ANGULAR_DAMPING   = 4.0;   // was 4.5
+const BRAKE_DAMPING_X10 = 12.0;  // firmer braking
+const MAX_SPEED         = 13;    // was 11; higher gravity + more force → 47 km/h
 
 // Material colors — keep on the cool side so dawn warm light reads on top.
 const COL_CHASSIS  = "#5a4f3d";  // dust-coated brown body
@@ -169,7 +171,7 @@ export default function Truck() {
     <RigidBody
       ref={body}
       colliders={false}
-      mass={1800}
+      mass={1400}
       position={[SPAWN_X, SPAWN_Y, SPAWN_Z]}
       // Face north (truck local -Z is forward; rotate ~ to point along +Z driving direction).
       // Spawn rotation = 0 means truck faces -Z, but we want it facing +Z (north).
@@ -188,19 +190,19 @@ export default function Truck() {
       {/* ── Chassis lower body — full length, sits between the wheels ─── */}
       <mesh castShadow position={[0, -0.05, 0]}>
         <boxGeometry args={[1.8, 0.7, 4.2]} />
-        <meshStandardMaterial color={COL_CHASSIS} roughness={0.85} metalness={0.05} />
+        <meshStandardMaterial color={COL_CHASSIS} roughness={0.85} metalness={0.05} flatShading />
       </mesh>
 
       {/* ── Hood (front lower box) — sits forward of the cabin ─────────── */}
       <mesh castShadow position={[0, 0.45, -1.15]}>
         <boxGeometry args={[1.7, 0.45, 1.6]} />
-        <meshStandardMaterial color={COL_CHASSIS} roughness={0.85} metalness={0.05} />
+        <meshStandardMaterial color={COL_CHASSIS} roughness={0.85} metalness={0.05} flatShading />
       </mesh>
 
       {/* ── Cabin (upper box, rear of hood) — driver + passenger ───────── */}
       <mesh castShadow position={[0, 0.65, 0.45]}>
         <boxGeometry args={[1.72, 0.95, 1.95]} />
-        <meshStandardMaterial color={COL_CABIN} roughness={0.9} metalness={0.05} />
+        <meshStandardMaterial color={COL_CABIN} roughness={0.9} metalness={0.05} flatShading />
       </mesh>
 
       {/* ── Windshield ─────────────────────────────────────────────────── */}
@@ -222,7 +224,7 @@ export default function Truck() {
       {/* ── Rear cargo bed cap (low, behind cabin) ─────────────────────── */}
       <mesh castShadow position={[0, 0.25, 1.65]}>
         <boxGeometry args={[1.7, 0.5, 0.85]} />
-        <meshStandardMaterial color={COL_CHASSIS} roughness={0.95} metalness={0.05} />
+        <meshStandardMaterial color={COL_CHASSIS} roughness={0.95} metalness={0.05} flatShading />
       </mesh>
 
       {/* ── Roof rack — flat box on top, the period detail that says "this
