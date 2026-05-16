@@ -23,20 +23,25 @@ export default function World() {
           rayleigh 2.8 → deep blue Rayleigh band above horizon.
           turbidity 7 → hazy dawn atmosphere, blends sun disk into horizon glow.
           Sun low + side-on gives a clear warm/cold sky gradient. */}
+      {/* Sun rises from the east (+X). Truck drives north (+Z).
+          Side lighting means the terrain and truck read clearly — no backlit
+          silhouette problem from having the sun directly behind the camera. */}
       <Sky
-        sunPosition={[80, 12, -100]}
-        turbidity={7}
-        rayleigh={2.8}
-        mieCoefficient={0.004}
-        mieDirectionalG={0.82}
+        sunPosition={[100, 8, 30]}
+        turbidity={6}
+        rayleigh={3}
+        mieCoefficient={0.005}
+        mieDirectionalG={0.85}
       />
 
-      {/* Lighting — dawn. Cool ambient, warm directional grazing the truck side-on. */}
-      <hemisphereLight args={["#a3a89e", "#3a3326", 0.7]} />
+      {/* Lighting — dawn. Hemisphere for sky/ground bounce. Directional matches
+          sun position: east-northeast low angle. Warm orange-gold rakes across
+          terrain at a glancing angle, giving the sand texture without bloom. */}
+      <hemisphereLight args={["#b0a898", "#3a3326", 0.65]} />
       <directionalLight
-        position={[60, 50, -40]}
-        intensity={2.2}
-        color="#ffd1a0"
+        position={[100, 40, 20]}
+        intensity={2.5}
+        color="#ffb86a"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-200}
@@ -49,8 +54,9 @@ export default function World() {
         shadow-normalBias={0.04}
       />
 
-      {/* Atmospheric depth — pushed out so the ground reads near the truck. */}
-      <fog attach="fog" args={["#b4b8b6", 140, 480]} />
+      {/* Atmospheric depth — warm dust haze. Color matches the dawn horizon
+          so the distance fades to a convincing Mosul haze rather than cold grey. */}
+      <fog attach="fog" args={["#c8b89a", 120, 420]} />
 
       {/* Heightfield terrain (static) + the truck (dynamic). Both share the
           same heightAt() function for visual / collision agreement. */}

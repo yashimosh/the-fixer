@@ -16,12 +16,12 @@ import { shake } from "./shakeRef";
 //   local -Z = world +Z = forward (truck drives in world +Z)
 //   local +Z = world -Z = backward (where the camera sits)
 //   local +Y = world +Y = up
-// Camera sits 8m behind the truck, 2.5m above its centre.
-// Look target is 5m ahead, 1.8m BELOW truck centre — this points at the
+// Camera sits 11m behind the truck, 3.5m above its centre.
+// Look target is 8m ahead, 2m BELOW truck centre — this points at the
 // terrain surface ahead of the truck so the terrain fills most of the frame
 // with sky showing as a strip at the top. Reference: Over the Hill, Bruno Simon.
-const OFFSET_LOCAL = new Vector3(0, 2.5, 8);
-const LOOK_LOCAL   = new Vector3(0, -1.8, -5);
+const OFFSET_LOCAL = new Vector3(0, 3.5, 11);
+const LOOK_LOCAL   = new Vector3(0, -2.0, -8);
 const FOLLOW_LERP  = 4.5;
 const LOOK_LERP    = 6.0;
 
