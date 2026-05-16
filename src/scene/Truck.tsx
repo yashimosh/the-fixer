@@ -204,6 +204,11 @@ export default function Truck() {
       // Rotate π around Y so headlights point north.
       rotation={[0, Math.PI, 0]}
       enabledRotations={[false, true, false]}
+      // CCD (Continuous Collision Detection) — prevents tunneling through the
+      // trimesh terrain when falling fast under -18 gravity. Without CCD, a fast
+      // body can travel more than one collider's thickness in a single physics step
+      // and pass clean through the terrain. CCD subdivides the step to catch it.
+      ccd
     >
       {/* Single cuboid collider sized to the chassis — covers wheels too so
           the truck rolls on its wheels without per-wheel physics. */}
