@@ -33,6 +33,9 @@ import { truckRef } from "./truckRef";
 import { useGame } from "../store";
 import { SPAWN_X, SPAWN_Y, SPAWN_Z } from "./terrainFn";
 
+// Max visual steer angle (radians) — ~25°. Matches plausible Land Cruiser lock.
+const MAX_STEER_ANGLE = 0.44;
+
 // Physics feel — a 70-series Land Cruiser on rough mountain roads.
 // Higher LINEAR_DAMPING makes terrain resistance tangible (hills slow you,
 // flat hardpack lets you build speed). STEER_TORQUE is deliberately lower
@@ -66,10 +69,17 @@ export default function Truck() {
   const frameNum  = useRef(0);
 
   // Per-wheel spin refs (inner group, rotated each frame by road speed).
-  const wFL = useRef<Group>(null);  // front-left
-  const wFR = useRef<Group>(null);  // front-right
-  const wRL = useRef<Group>(null);  // rear-left
-  const wRR = useRef<Group>(null);  // rear-right
+  const wFL = useRef<Group>(null);  // front-left  — spin
+  const wFR = useRef<Group>(null);  // front-right — spin
+  const wRL = useRef<Group>(null);  // rear-left   — spin
+  const wRR = useRef<Group>(null);  // rear-right  — spin
+
+  // Front-wheel steer refs (OUTER group, Y-rotated to match steer input).
+  const sFL = useRef<Group>(null);  // front-left  — steer pivot
+  const sFR = useRef<Group>(null);  // front-right — steer pivot
+
+  // Current steer angle — lerped toward target each frame for smooth visual.
+  const steerAngle = useRef(0);
 
   useEffect(() => {
     truckRef.current = body.current;
@@ -130,6 +140,14 @@ export default function Truck() {
     if (wFR.current) wFR.current.rotation.x += spinDelta;
     if (wRL.current) wRL.current.rotation.x += spinDelta;
     if (wRR.current) wRR.current.rotation.x += spinDelta;
+
+    // Front-wheel visual steering — lerp steer angle toward input target.
+    // Target: ±MAX_STEER_ANGLE when key held, 0 when released.
+    // Lerp speed tuned so wheels reach full lock in ~0.3s.
+    const steerTarget = k.left ? MAX_STEER_ANGLE : k.right ? -MAX_STEER_ANGLE : 0;
+    steerAngle.current += (steerTarget - steerAngle.current) * Math.min(1, dt * 8);
+    if (sFL.current) sFL.current.rotation.y = steerAngle.current;
+    if (sFR.current) sFR.current.rotation.y = steerAngle.current;
   });
 
   return (
@@ -222,9 +240,16 @@ export default function Truck() {
         <meshStandardMaterial color={COL_TAIL} emissive={COL_TAIL} emissiveIntensity={0.2} />
       </mesh>
 
-      {/* ── Wheels — visual; spin group driven by velocity each frame ─── */}
-      <Wheel position={[-TRACK_WIDTH / 2, -0.5, -WHEELBASE / 2]} spinRef={wFL} />
-      <Wheel position={[ TRACK_WIDTH / 2, -0.5, -WHEELBASE / 2]} spinRef={wFR} />
+      {/* ── Wheels — front pair steers (outer steer group), all spin ──── */}
+      {/* Front-left: steer pivot wraps the wheel so Y rotation steers */}
+      <group ref={sFL} position={[-TRACK_WIDTH / 2, -0.5, -WHEELBASE / 2]}>
+        <Wheel position={[0, 0, 0]} spinRef={wFL} />
+      </group>
+      {/* Front-right */}
+      <group ref={sFR} position={[ TRACK_WIDTH / 2, -0.5, -WHEELBASE / 2]}>
+        <Wheel position={[0, 0, 0]} spinRef={wFR} />
+      </group>
+      {/* Rear wheels — no steer group; position directly */}
       <Wheel position={[-TRACK_WIDTH / 2, -0.5,  WHEELBASE / 2]} spinRef={wRL} />
       <Wheel position={[ TRACK_WIDTH / 2, -0.5,  WHEELBASE / 2]} spinRef={wRR} />
     </RigidBody>
