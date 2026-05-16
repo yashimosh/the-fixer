@@ -61,7 +61,7 @@ export const CANONICAL_2017: IncidentText = {
     {
       triggerZ: -10,
       cargoRisk: true,
-      text: "Your radio picks up Rudaw. You turn it off before she asks what they're saying.",
+      text: "Your radio picks up Rudaw. You turn it off.",
     },
     {
       triggerZ: +22,
@@ -97,8 +97,8 @@ export const CANONICAL_2017: IncidentText = {
       "JUNE 2017 — AFTER",
       "You drop them at the Divan. They don't speak much on the way back.",
       "The story does not file in time. The desk runs something else.",
-      "The interview is published a year later in a book that almost no one buys. Her brothers are still named, somewhere. Just not where the world will read them.",
-      "You drive home to Ankawa. You don't sleep that night.",
+      "The interview is published a year later in a collection. Her brothers are named in the index.",
+      "You drive home to Ankawa. The phone doesn't ring on Sunday.",
     ],
   },
 };
