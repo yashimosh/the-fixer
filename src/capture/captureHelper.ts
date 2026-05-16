@@ -258,3 +258,59 @@ function setupCapture() {
 
 // Auto-init when imported
 setupCapture();
+
+// ── Autoplay mode ─────────────────────────────────────────────────────────────
+// Add ?autoplay=1 to the URL to run a full automated drive+record pass.
+// Optional params: &duration=40 &filename=my-clip
+// Usage: http://localhost:5173/?autoplay=1
+// The run starts 4 seconds after load (enough for React + physics to mount).
+(function autoplay() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("autoplay")) return;
+
+  const duration = parseInt(params.get("duration") ?? "40", 10);
+  const filename = params.get("filename") ?? undefined;
+
+  console.info(`[fixer] autoplay mode — duration=${duration}s, file=${filename ?? "auto"}`);
+
+  // Poll until __fixerKeys is set (Truck component mounted)
+  const waitForKeys = () =>
+    new Promise<void>((resolve, reject) => {
+      let tries = 0;
+      const id = setInterval(() => {
+        if ((window as unknown as Record<string, unknown>).__fixerKeys) {
+          clearInterval(id);
+          resolve();
+        } else if (++tries > 60) {        // 12 seconds max
+          clearInterval(id);
+          reject(new Error("__fixerKeys never set — Truck did not mount"));
+        }
+      }, 200);
+    });
+
+  setTimeout(async () => {
+    try {
+      // Click DRIVE button if still showing
+      const btn = document.querySelector<HTMLButtonElement>("button.story-card-action");
+      if (btn) { btn.click(); console.info("[fixer] autoplay: DRIVE clicked"); }
+      else      { console.info("[fixer] autoplay: DRIVE already clicked"); }
+
+      // Wait for Truck to mount and set __fixerKeys
+      await waitForKeys();
+      // Extra buffer for physics bodies to initialise
+      await new Promise(r => setTimeout(r, 1500));
+
+      console.info("[fixer] autoplay: starting drive + record");
+      ((window as unknown as Record<string, unknown>).__fixerDrive as
+        ((d: number) => void) | undefined)?.(duration);
+      await ((window as unknown as Record<string, unknown>).__fixerRecord as
+        ((s: number, f?: string) => Promise<void>) | undefined)?.(duration, filename);
+
+      console.info("[fixer] autoplay: recording complete — triggering download");
+      ((window as unknown as Record<string, unknown>).__fixerDownload as
+        (() => void) | undefined)?.();
+    } catch (e) {
+      console.error("[fixer] autoplay error:", e);
+    }
+  }, 4000);
+})();

@@ -38,7 +38,7 @@ function RendererInfoExposer() {
   useEffect(() => {
     if (!SHOW_PERF) return;
     const id = setInterval(() => {
-      (window as Record<string, unknown>).__fixerRendererInfo = {
+      (window as unknown as Record<string, unknown>).__fixerRendererInfo = {
         drawCalls: gl.info.render.calls,
         triangles: gl.info.render.triangles,
         points:    gl.info.render.points,

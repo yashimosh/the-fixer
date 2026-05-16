@@ -11,7 +11,7 @@
 import { create } from "zustand";
 import type { IncidentText } from "./story/incidents";
 import { CANONICAL_2017 } from "./story/incidents";
-import { trackSessionStart, trackSessionEnd } from "./telemetry";
+import { trackSessionStart } from "./telemetry";
 
 export type StoryPhase = "intro" | "running" | "ended";
 
