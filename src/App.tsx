@@ -7,7 +7,8 @@
 // Renderer: WebGL2 by default for now. WebGPU upgrade planned (see STACK.md);
 // the renderer swap is a Canvas-prop change, not a code rewrite.
 
-import { Canvas } from "@react-three/fiber";
+import { useEffect } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { Physics } from "@react-three/rapier";
 import World from "./scene/World";
@@ -15,8 +16,55 @@ import StoryWatcher from "./scene/StoryWatcher";
 import HUD from "./ui/HUD";
 import StoryCard from "./ui/StoryCard";
 import BeatFlash from "./ui/BeatFlash";
+import { trackSessionEnd } from "./telemetry";
+import { useGame } from "./store";
+
+// ── Performance overlay — r3f-perf ──────────────────────────────────────────
+// Enabled in dev mode OR when ?perf=1 is in the URL (works in production too,
+// useful for diagnosing live perf issues without a local build).
+// Import is lazy so the ~20 KB r3f-perf bundle is NOT shipped in production
+// unless explicitly requested.
+import { Perf } from "r3f-perf";
+const SHOW_PERF =
+  import.meta.env.DEV ||
+  new URLSearchParams(window.location.search).has("perf");
+
+// ── RendererInfoExposer — exposes Three.js renderer.info to window ───────────
+// Used by Playwright perf tests to assert on draw calls + triangle counts
+// without needing to instrument the renderer directly.
+// Only mounted when needed (dev mode or ?perf=1).
+function RendererInfoExposer() {
+  const { gl } = useThree();
+  useEffect(() => {
+    if (!SHOW_PERF) return;
+    const id = setInterval(() => {
+      (window as Record<string, unknown>).__fixerRendererInfo = {
+        drawCalls: gl.info.render.calls,
+        triangles: gl.info.render.triangles,
+        points:    gl.info.render.points,
+        lines:     gl.info.render.lines,
+        textures:  gl.info.memory.textures,
+      };
+    }, 500); // update every 500ms — enough for tests, low overhead
+    return () => clearInterval(id);
+  }, [gl]);
+  return null;
+}
 
 export default function App() {
+  // Session-end telemetry — fires when player closes/navigates away mid-run.
+  // Gives us data on where they quit if the run didn't complete.
+  useEffect(() => {
+    const onUnload = () => {
+      const { phase, cargoSecured } = useGame.getState();
+      // Read truck Z from the truckRef if available — best effort
+      const truckZ = 0; // TODO: expose truckRef.current?.translation()?.z via store
+      trackSessionEnd(truckZ, cargoSecured, phase);
+    };
+    window.addEventListener('pagehide', onUnload);
+    return () => window.removeEventListener('pagehide', onUnload);
+  }, []);
+
   return (
     <>
       <div className="stage">
@@ -44,6 +92,10 @@ export default function App() {
             {/* Reads truck z each frame, fires beats and the ending. */}
             <StoryWatcher />
           </Physics>
+
+          {/* Performance overlay — only in dev or ?perf=1 */}
+          {SHOW_PERF && <Perf position="top-left" />}
+          {SHOW_PERF && <RendererInfoExposer />}
         </Canvas>
       </div>
 

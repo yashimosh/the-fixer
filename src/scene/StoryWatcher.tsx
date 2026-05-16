@@ -19,6 +19,7 @@ import { useFrame } from "@react-three/fiber";
 import { truckRef } from "./truckRef";
 import { useGame } from "../store";
 import { shake } from "./shakeRef";
+import { trackBeatRead, trackCargoLost, trackRunComplete } from "../telemetry";
 
 const END_Z            = 120;   // truck-z threshold for crossing into "after"
 const END_MIN_SECONDS  = 8;     // floor on run duration before ending fires
@@ -55,6 +56,11 @@ export default function StoryWatcher() {
         useGame.getState().showBeat(beat.text);
         shake.countdown = 0.38; // brief camera jolt so the beat has a physical marker
 
+        // Telemetry — record that this beat fired. Gives real player data on
+        // which beats get read vs driven past (no dwell-time metric needed;
+        // the beat fired = the text appeared on screen).
+        trackBeatRead(i, beat.text);
+
         // Cargo-risk check — if this beat is a risk moment and the player is
         // driving above threshold, one cargo item is lost.
         // Loss is signalled by a smaller camera shake + a diegetic flash line
@@ -65,6 +71,7 @@ export default function StoryWatcher() {
           if (speed > CARGO_RISK_SPEED) {
             useGame.getState().loseCargoItem();
             shake.countdown = 0.18; // shorter/smaller than beat shake (0.38)
+            trackCargoLost(i, Math.round(speed * 3.6)); // speed in km/h for telemetry
             // Diegetic loss line — fires immediately after the beat text.
             // Timeout lets the beat text settle for 1s before the loss lands.
             window.setTimeout(() => {
@@ -91,6 +98,10 @@ export default function StoryWatcher() {
       else                                 variant = "failed";
       // Note: cargoSecured can reach 1 (lose all 3 risk beats) → "failed".
       // cargoSecured=0 is unreachable with 3 risk beats; ≤1 covers the floor.
+      const runDuration = runStartedAt.current !== null
+        ? Math.round(now - runStartedAt.current)
+        : 0;
+      trackRunComplete(variant, cargoSecured, runDuration);
       endRun(variant);
     }
   });

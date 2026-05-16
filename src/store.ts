@@ -11,6 +11,7 @@
 import { create } from "zustand";
 import type { IncidentText } from "./story/incidents";
 import { CANONICAL_2017 } from "./story/incidents";
+import { trackSessionStart, trackSessionEnd } from "./telemetry";
 
 export type StoryPhase = "intro" | "running" | "ended";
 
@@ -58,8 +59,11 @@ export const useGame = create<GameState>((set, get) => ({
 
   loseCargoItem: () => set((s) => ({ cargoSecured: Math.max(0, s.cargoSecured - 1) })),
 
-  startRun: () => set({ phase: "running" }),
-  endRun:   (s) => set({ phase: "ended", endingState: s }),
+  startRun: () => {
+    trackSessionStart();
+    set({ phase: "running" });
+  },
+  endRun: (s) => set({ phase: "ended", endingState: s }),
 
   showBeat: (text) => set({ flashText: text, flashId: get().flashId + 1 }),
   clearFlash: () => set({ flashText: null }),
