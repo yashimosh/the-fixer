@@ -10,9 +10,19 @@ import { Vector3, Quaternion } from "three";
 import { truckRef } from "./truckRef";
 import { shake } from "./shakeRef";
 
-const OFFSET_LOCAL = new Vector3(0, 6.5, 12);    // behind and above the truck
-const LOOK_OFFSET  = new Vector3(0, 2.2, 0);     // look slightly above the truck — frames the sky
-const FOLLOW_LERP  = 4.5;                        // higher = snappier follow
+// Both offsets are in truck-LOCAL space. OFFSET_LOCAL applied via quaternion
+// gives camera position; LOOK_LOCAL applied via quaternion gives look target.
+// Truck local axes after spawn rotation (π around Y):
+//   local -Z = world +Z = forward (truck drives in world +Z)
+//   local +Z = world -Z = backward (where the camera sits)
+//   local +Y = world +Y = up
+// Camera sits 8m behind the truck, 2.5m above its centre.
+// Look target is 5m ahead, 1.8m BELOW truck centre — this points at the
+// terrain surface ahead of the truck so the terrain fills most of the frame
+// with sky showing as a strip at the top. Reference: Over the Hill, Bruno Simon.
+const OFFSET_LOCAL = new Vector3(0, 2.5, 8);
+const LOOK_LOCAL   = new Vector3(0, -1.8, -5);
+const FOLLOW_LERP  = 4.5;
 const LOOK_LERP    = 6.0;
 
 // Reused work vectors to avoid GC pressure each frame.
@@ -43,10 +53,10 @@ export default function ChaseCamera() {
     const posK = 1 - Math.exp(-FOLLOW_LERP * dt);
     camera.position.lerp(_desiredPos, posK);
 
-    // Lerp the look-at target similarly so the camera doesn't snap when the
-    // truck rotates fast.
-    _lookTarget.copy(_truckPos).add(LOOK_OFFSET);
-    _camLook.copy(_lookTarget); // start point is current target
+    // Look target: truck position + LOOK_LOCAL rotated by truck yaw.
+    // Points 10m ahead of the truck so the driver sees what's coming.
+    _lookTarget.copy(LOOK_LOCAL).applyQuaternion(_truckQuat).add(_truckPos);
+    _camLook.copy(_lookTarget);
     const lookK = 1 - Math.exp(-LOOK_LERP * dt);
     // Decompose camera's current forward direction to estimate where it
     // currently looks, then lerp to the new target. Simpler: just look at
@@ -61,7 +71,7 @@ export default function ChaseCamera() {
       camera.position.y += (Math.random() - 0.5) * mag * 0.4;
     }
 
-    void _camLook; // placeholder for future smoother look interpolation
+    void _camLook;
     void lookK;
   });
 
