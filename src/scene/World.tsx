@@ -11,6 +11,7 @@ import ChaseCamera from "./ChaseCamera";
 import EngineAudio from "./EngineAudio";
 import AmbientAudio from "./AmbientAudio";
 import Scenery from "./Scenery";
+import Pedestrians from "./Pedestrians";
 import PostFX from "./PostFX";
 
 export default function World() {
@@ -73,6 +74,7 @@ export default function World() {
           same heightAt() function for visual / collision agreement. */}
       <Terrain />
       <Scenery />
+      <Pedestrians />
       <Truck />
 
       {/* Chase camera — follows the truck's chassis transform every frame. */}

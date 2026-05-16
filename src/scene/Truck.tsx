@@ -1,25 +1,31 @@
-// Truck — Sor's vehicle. Land Cruiser silhouette built from primitives.
+// Truck — Sor's vehicle. Real Rapier raycast vehicle, no fakery.
 //
-// Physics: Rapier DynamicRayCastVehicleController — real 4-wheel raycast
-// vehicle with simulated suspension travel, friction slip, axle constraints,
-// and ground contact. Replaces the previous single-cuboid fake-wheels
-// implementation. This is the Bruno Simon / Border Run reference: the truck
-// bounces over terrain bumps because each wheel raycasts independently and
-// the suspension spring compresses/extends accordingly.
+// COORDINATE CONVENTION (this matters — the previous version had a bug here):
+//   Chassis local +Z = FORWARD (where headlights point, where wheels drive)
+//   Chassis local -Z = REAR    (tail lights, cargo bed cap)
+//   Chassis local +X = RIGHT side
+//   indexForwardAxis = 2 (chassis +Z is forward direction for the controller)
+//   indexUpAxis      = 1 (chassis +Y is up)
 //
-// Architecture:
-//   - RigidBody hosts the chassis collider (covers cabin + hood + bed).
-//   - useRapier() exposes the world to create the vehicle controller.
-//   - The controller is created in a useEffect after the rigid body is mounted.
-//   - Each frame: read input → set engine/brake/steering on appropriate wheels
-//     → call updateVehicle(dt) → read wheel state → sync visual wheels.
-//   - Visual wheels live as Groups INSIDE the RigidBody, so their positions
-//     are in chassis-local space (matches the controller's coordinate system).
+// Spawn rotation = 0. The truck is built so its natural orientation
+// (chassis +Z = forward) matches world +Z = north = route direction. No need
+// to rotate the rigid body; engine force in +Z drives it down the route.
 //
-// Local axes (Rapier vehicle controller config):
-//   indexUpAxis = 1       (Y is up)
-//   indexForwardAxis = 2  (Z is forward in chassis local space)
-// After the spawn-rotation π around Y: world +Z = forward driving direction.
+// Wheel indices:
+//   0 = front-left  (steerable, free-rolling)
+//   1 = front-right (steerable, free-rolling)
+//   2 = rear-left   (driven by engine, brake)
+//   3 = rear-right  (driven by engine, brake)
+//
+// Visual wheels are Groups inside the RigidBody. Each frame:
+//   group.position = (chassis_connection.x, connection.y - susLength, connection.z)
+//   group.rotation = (spin_x, steer_y, 0)
+// The mesh inside each group is a cylinder rotated to align along X (axle).
+//
+// Why this is different from the previous attempt:
+//   v1 rotated the RigidBody π around Y so the truck visual faced world +Z
+//   but engine force then drove the truck the wrong way (chassis +Z → world -Z).
+//   This version puts chassis +Z = forward natively. No rotation gymnastics.
 
 import { useRef, useEffect } from "react";
 import type { Group } from "three";
@@ -37,32 +43,28 @@ import { useGame } from "../store";
 import { SPAWN_X, SPAWN_Y, SPAWN_Z } from "./terrainFn";
 
 // ── Vehicle tuning ─────────────────────────────────────────────────────────
-// Drawn from Border Run constants (cannon-es RaycastVehicle) and scaled for
-// Rapier's slightly different impulse units. The goal: bouncy, responsive,
-// fun to drive. Bruno Simon territory.
-const MAX_STEER_ANGLE   = 0.55;   // radians — wider lock than fake-wheel version
-const ENGINE_FORCE_PEAK = 1400;   // applied to rear wheels under throttle
-const BRAKE_FORCE       = 80;     // per-wheel brake impulse
-const MAX_FORWARD_SPEED = 14;     // m/s ≈ 50 km/h — cap to prevent runaway
+const MAX_STEER_ANGLE   = 0.55;
+const ENGINE_FORCE_PEAK = 1400;
+const BRAKE_FORCE       = 80;
+const MAX_FORWARD_SPEED = 14;     // m/s ≈ 50 km/h
 
-const WHEELBASE         = 2.7;    // distance front-to-rear axle
-const TRACK_WIDTH       = 1.55;   // distance left-to-right wheel centres
+const WHEELBASE         = 2.7;
+const TRACK_WIDTH       = 1.55;
 const WHEEL_R           = 0.42;
 const WHEEL_W           = 0.32;
 
-// Suspension tuning — per wheel. Soft enough to absorb terrain noise without
-// bottoming out, stiff enough that the chassis doesn't wallow on turns.
+// Suspension — soft enough to absorb terrain bumps, stiff enough not to wallow.
 const SUSPENSION_REST   = 0.42;
 const SUSPENSION_STIFF  = 28;
-const SUSPENSION_COMP   = 1.6;    // damping during compression
-const SUSPENSION_RELAX  = 2.4;    // damping during rebound (higher = less bouncy)
+const SUSPENSION_COMP   = 1.6;
+const SUSPENSION_RELAX  = 2.4;
 const SUSPENSION_TRAVEL = 0.35;
 const MAX_SUSP_FORCE    = 60000;
-const FRICTION_SLIP     = 2.5;    // traction — higher = more grip
+const FRICTION_SLIP     = 2.5;
 const SIDE_FRICTION     = 0.85;
 
 // ── Materials ──────────────────────────────────────────────────────────────
-const COL_CHASSIS  = "#7d6845";   // warmer dust brown — bumped saturation for bloom
+const COL_CHASSIS  = "#7d6845";
 const COL_CABIN    = "#4f4a38";
 const COL_TIRE     = "#1a1814";
 const COL_RIM      = "#3a3a3a";
@@ -71,8 +73,7 @@ const COL_HEAD     = "#fff5d6";
 const COL_TAIL     = "#a02828";
 const COL_BUMPER   = "#36302a";
 
-// Wheel index conventions used throughout this file:
-//   0 = front-left, 1 = front-right, 2 = rear-left, 3 = rear-right
+// Wheel index constants — clearer than magic numbers in the engine code.
 const FL = 0, FR = 1, RL = 2, RR = 3;
 
 export default function Truck() {
@@ -83,15 +84,10 @@ export default function Truck() {
 
   const vehicle = useRef<DynamicRayCastVehicleController | null>(null);
 
-  // Visual wheel refs — each is a Group whose position is set in chassis-
-  // local space (Y = connection.y - suspensionLength), Y-rotation = steer,
-  // X-rotation = spin angle.
+  // Visual wheel refs.
   const wheelGroups = useRef<(Group | null)[]>([null, null, null, null]);
-
-  // Smoothed steering target so input doesn't snap.
   const steerSmoothed = useRef(0);
 
-  // ── Mount: register truckRef + create vehicle controller ────────────────
   useEffect(() => {
     if (!body.current) return;
     truckRef.current = body.current;
@@ -99,33 +95,25 @@ export default function Truck() {
     const controller = world.createVehicleController(body.current);
     vehicle.current = controller;
 
-    controller.indexUpAxis = 1;           // Y is up
-    controller.setIndexForwardAxis = 2;   // Z is forward (chassis local)
+    controller.indexUpAxis = 1;
+    controller.setIndexForwardAxis = 2;  // chassis +Z is forward
 
-    // Wheel attachment points in CHASSIS-LOCAL space.
-    // Y = -0.35 puts the wheel hubs just below the chassis bottom.
-    // The suspension then raycasts down from these anchor points.
+    // Wheel attachment in CHASSIS-LOCAL space. Front wheels at +Z.
+    // Y = -0.35 puts the suspension anchor just below the chassis bottom.
     const positions: [number, number, number][] = [
-      [-TRACK_WIDTH / 2, -0.35, -WHEELBASE / 2],  // FL
-      [ TRACK_WIDTH / 2, -0.35, -WHEELBASE / 2],  // FR
-      [-TRACK_WIDTH / 2, -0.35,  WHEELBASE / 2],  // RL
-      [ TRACK_WIDTH / 2, -0.35,  WHEELBASE / 2],  // RR
+      [-TRACK_WIDTH / 2, -0.35,  WHEELBASE / 2],  // FL — front-left
+      [ TRACK_WIDTH / 2, -0.35,  WHEELBASE / 2],  // FR — front-right
+      [-TRACK_WIDTH / 2, -0.35, -WHEELBASE / 2],  // RL — rear-left
+      [ TRACK_WIDTH / 2, -0.35, -WHEELBASE / 2],  // RR — rear-right
     ];
 
-    const susDir  = { x: 0, y: -1, z: 0 };   // suspension extends downward
-    const axleDir = { x: -1, y: 0, z: 0 };   // wheels rotate around X axis
+    const susDir  = { x: 0, y: -1, z: 0 };
+    const axleDir = { x: -1, y: 0, z: 0 };
 
     for (const [x, y, z] of positions) {
-      controller.addWheel(
-        { x, y, z },
-        susDir,
-        axleDir,
-        SUSPENSION_REST,
-        WHEEL_R,
-      );
+      controller.addWheel({ x, y, z }, susDir, axleDir, SUSPENSION_REST, WHEEL_R);
     }
 
-    // Configure each wheel identically.
     for (let i = 0; i < 4; i++) {
       controller.setWheelSuspensionStiffness(i, SUSPENSION_STIFF);
       controller.setWheelSuspensionCompression(i, SUSPENSION_COMP);
@@ -138,14 +126,13 @@ export default function Truck() {
 
     return () => {
       if (vehicle.current) {
-        try { world.removeVehicleController(vehicle.current); } catch { /* world disposed */ }
+        try { world.removeVehicleController(vehicle.current); } catch { /* ignore */ }
         vehicle.current = null;
       }
       truckRef.current = null;
     };
   }, [world]);
 
-  // ── Per-frame: input → controller → visual sync ─────────────────────────
   useFrame((_, dt) => {
     const controller = vehicle.current;
     const rb = body.current;
@@ -155,11 +142,12 @@ export default function Truck() {
     const phase = useGame.getState().phase;
     const isRunning = phase === "running";
 
-    // Forward speed reported by the controller (signed: + forward, - reverse).
+    // currentVehicleSpeed: signed along forward axis. Positive = moving forward.
     const speed = controller.currentVehicleSpeed();
     const speedAbs = Math.abs(speed);
 
-    // ── Engine (rear-wheel drive) ─────────────────────────────────────────
+    // ── Engine (rear-wheel drive — wheels at chassis -Z) ─────────────────
+    // Positive engine force drives chassis in +Z (forward). k.fwd → positive.
     let engineForce = 0;
     if (isRunning) {
       if (k.fwd && speed < MAX_FORWARD_SPEED) {
@@ -171,13 +159,13 @@ export default function Truck() {
     controller.setWheelEngineForce(RL, engineForce);
     controller.setWheelEngineForce(RR, engineForce);
 
-    // ── Brake (all wheels) ────────────────────────────────────────────────
+    // ── Brake (all wheels) ───────────────────────────────────────────────
     const brake = (isRunning && k.brake) ? BRAKE_FORCE : 0;
     for (let i = 0; i < 4; i++) controller.setWheelBrake(i, brake);
 
-    // ── Steering (front wheels) ───────────────────────────────────────────
-    // Smooth toward target so a key-tap doesn't snap the wheels fully.
-    // At speed, reduce max angle so high-speed turns require commitment.
+    // ── Steering (front wheels — wheels at chassis +Z) ───────────────────
+    // Positive steering = turn left (counter-clockwise viewed from above)
+    // when moving forward (+Z). k.left → positive.
     const speedFactor = Math.max(0.45, 1 - speedAbs / (MAX_FORWARD_SPEED * 1.2));
     const steerTarget = isRunning
       ? (k.left ? MAX_STEER_ANGLE : k.right ? -MAX_STEER_ANGLE : 0) * speedFactor
@@ -186,29 +174,24 @@ export default function Truck() {
     controller.setWheelSteering(FL, steerSmoothed.current);
     controller.setWheelSteering(FR, steerSmoothed.current);
 
-    // ── Integrate vehicle (does raycasts, applies suspension forces) ──────
+    // ── Integrate vehicle ────────────────────────────────────────────────
     controller.updateVehicle(dt);
 
-    // ── Sync visual wheels ────────────────────────────────────────────────
-    // Position: connection point + suspension travel along suspension dir (-Y).
-    // Rotation: steering on Y axis (front wheels), spin on X axis (all wheels).
+    // ── Sync visual wheels ───────────────────────────────────────────────
     for (let i = 0; i < 4; i++) {
       const g = wheelGroups.current[i];
       if (!g) continue;
-
       const conn = controller.wheelChassisConnectionPointCs(i);
       const susLen = controller.wheelSuspensionLength(i);
       if (conn) {
-        const y = conn.y - (susLen ?? SUSPENSION_REST);
-        g.position.set(conn.x, y, conn.z);
+        g.position.set(conn.x, conn.y - (susLen ?? SUSPENSION_REST), conn.z);
       }
-
       const steer = controller.wheelSteering(i) ?? 0;
       const rot   = controller.wheelRotation(i) ?? 0;
       g.rotation.set(rot, steer, 0);
     }
 
-    // ── HUD speed (km/h), throttled to ~12 Hz ────────────────────────────
+    // HUD speed (km/h)
     frameNum.current++;
     if (frameNum.current % 5 === 0) {
       useGame.getState().setSpeed(Math.round(speedAbs * 3.6));
@@ -221,91 +204,88 @@ export default function Truck() {
       colliders={false}
       mass={1500}
       position={[SPAWN_X, SPAWN_Y, SPAWN_Z]}
-      // Face north — local -Z is forward, rotate π around Y so the truck
-      // drives along world +Z (the direction the route extends).
-      rotation={[0, Math.PI, 0]}
+      // NO spawn rotation. Chassis +Z = forward, naturally aligns with world +Z.
       canSleep={false}
       ccd
     >
-      {/* Chassis collider — sized to fit cabin + hood + bed, sits above the
-          wheels so the suspension has room to compress. */}
+      {/* Chassis collider — sits above wheels so suspension has room. */}
       <CuboidCollider args={[0.85, 0.45, 1.95]} position={[0, 0.45, 0]} />
 
-      {/* ── Chassis lower body — full length, sits between the wheels ─── */}
+      {/* ── Chassis lower body ─────────────────────────────────────────── */}
       <mesh castShadow position={[0, -0.05, 0]}>
         <boxGeometry args={[1.8, 0.7, 4.2]} />
         <meshStandardMaterial color={COL_CHASSIS} roughness={0.85} metalness={0.05} flatShading />
       </mesh>
 
-      {/* ── Hood (front lower box) ─────────────────────────────────────── */}
-      <mesh castShadow position={[0, 0.45, -1.15]}>
+      {/* ── Hood (FRONT, +Z) ───────────────────────────────────────────── */}
+      <mesh castShadow position={[0, 0.45, 1.15]}>
         <boxGeometry args={[1.7, 0.45, 1.6]} />
         <meshStandardMaterial color={COL_CHASSIS} roughness={0.85} metalness={0.05} flatShading />
       </mesh>
 
-      {/* ── Cabin ──────────────────────────────────────────────────────── */}
-      <mesh castShadow position={[0, 0.65, 0.45]}>
+      {/* ── Cabin (rear of hood, -Z) ───────────────────────────────────── */}
+      <mesh castShadow position={[0, 0.65, -0.45]}>
         <boxGeometry args={[1.72, 0.95, 1.95]} />
         <meshStandardMaterial color={COL_CABIN} roughness={0.9} metalness={0.05} flatShading />
       </mesh>
 
-      {/* ── Windshield ─────────────────────────────────────────────────── */}
-      <mesh position={[0, 0.7, -0.55]}>
+      {/* ── Windshield (front of cabin, +0.55 from cabin = chassis +0.55-(-0.45/2)...
+            Cabin centre is -0.45, cabin depth 1.95 → cabin front face at -0.45+0.975=+0.525.
+            Windshield sits right at that face, slightly forward. */}
+      <mesh position={[0, 0.7, 0.55]}>
         <boxGeometry args={[1.55, 0.7, 0.05]} />
         <meshStandardMaterial color={COL_GLASS} roughness={0.2} metalness={0.8} />
       </mesh>
 
       {/* ── Side windows ───────────────────────────────────────────────── */}
-      <mesh position={[-0.86, 0.75, 0.45]}>
+      <mesh position={[-0.86, 0.75, -0.45]}>
         <boxGeometry args={[0.05, 0.5, 1.6]} />
         <meshStandardMaterial color={COL_GLASS} roughness={0.2} metalness={0.8} />
       </mesh>
-      <mesh position={[ 0.86, 0.75, 0.45]}>
+      <mesh position={[ 0.86, 0.75, -0.45]}>
         <boxGeometry args={[0.05, 0.5, 1.6]} />
         <meshStandardMaterial color={COL_GLASS} roughness={0.2} metalness={0.8} />
       </mesh>
 
-      {/* ── Rear cargo bed cap ─────────────────────────────────────────── */}
-      <mesh castShadow position={[0, 0.25, 1.65]}>
+      {/* ── Rear cargo bed cap (-Z, behind cabin) ──────────────────────── */}
+      <mesh castShadow position={[0, 0.25, -1.65]}>
         <boxGeometry args={[1.7, 0.5, 0.85]} />
         <meshStandardMaterial color={COL_CHASSIS} roughness={0.95} metalness={0.05} flatShading />
       </mesh>
 
-      {/* ── Roof rack ──────────────────────────────────────────────────── */}
-      <mesh castShadow position={[0, 1.18, 0.45]}>
+      {/* ── Roof rack (above cabin) ────────────────────────────────────── */}
+      <mesh castShadow position={[0, 1.18, -0.45]}>
         <boxGeometry args={[1.55, 0.06, 1.7]} />
         <meshStandardMaterial color="#2a2620" roughness={1} metalness={0.1} flatShading />
       </mesh>
 
-      {/* ── Front bumper ───────────────────────────────────────────────── */}
-      <mesh castShadow position={[0, 0.05, -2.0]}>
+      {/* ── Front bumper (+Z front edge) ───────────────────────────────── */}
+      <mesh castShadow position={[0, 0.05, 2.0]}>
         <boxGeometry args={[1.75, 0.18, 0.15]} />
         <meshStandardMaterial color={COL_BUMPER} roughness={0.7} metalness={0.3} />
       </mesh>
 
-      {/* ── Headlights — emissive, bloom-friendly ──────────────────────── */}
-      <mesh position={[-0.55, 0.45, -1.97]} rotation={[Math.PI / 2, 0, 0]}>
+      {/* ── Headlights (front, +Z) — emissive for bloom ────────────────── */}
+      <mesh position={[-0.55, 0.45, 1.97]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.16, 0.16, 0.08, 16]} />
-        <meshStandardMaterial color={COL_HEAD} emissive={COL_HEAD} emissiveIntensity={2.2} />
+        <meshStandardMaterial color={COL_HEAD} emissive={COL_HEAD} emissiveIntensity={2.4} />
       </mesh>
-      <mesh position={[ 0.55, 0.45, -1.97]} rotation={[Math.PI / 2, 0, 0]}>
+      <mesh position={[ 0.55, 0.45, 1.97]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.16, 0.16, 0.08, 16]} />
-        <meshStandardMaterial color={COL_HEAD} emissive={COL_HEAD} emissiveIntensity={2.2} />
+        <meshStandardMaterial color={COL_HEAD} emissive={COL_HEAD} emissiveIntensity={2.4} />
       </mesh>
 
-      {/* ── Tail lights ────────────────────────────────────────────────── */}
-      <mesh position={[-0.78, 0.35, 2.07]}>
+      {/* ── Tail lights (rear, -Z) ─────────────────────────────────────── */}
+      <mesh position={[-0.78, 0.35, -2.07]}>
         <boxGeometry args={[0.18, 0.16, 0.04]} />
         <meshStandardMaterial color={COL_TAIL} emissive={COL_TAIL} emissiveIntensity={0.2} />
       </mesh>
-      <mesh position={[ 0.78, 0.35, 2.07]}>
+      <mesh position={[ 0.78, 0.35, -2.07]}>
         <boxGeometry args={[0.18, 0.16, 0.04]} />
         <meshStandardMaterial color={COL_TAIL} emissive={COL_TAIL} emissiveIntensity={0.2} />
       </mesh>
 
-      {/* ── Wheels — driven entirely by vehicle controller each frame ──── */}
-      {/* These groups have no static position; useFrame writes position
-          (chassis-local) and rotation (steer+spin) every tick. */}
+      {/* ── Wheels — vehicle controller writes position+rotation each frame ── */}
       <group ref={(el) => { wheelGroups.current[FL] = el; }}><Wheel /></group>
       <group ref={(el) => { wheelGroups.current[FR] = el; }}><Wheel /></group>
       <group ref={(el) => { wheelGroups.current[RL] = el; }}><Wheel /></group>
@@ -314,9 +294,6 @@ export default function Truck() {
   );
 }
 
-// Single wheel mesh. Cylinder is created along Y axis by default; rotation
-// [0, 0, π/2] on the mesh aligns it along X (the axle direction). The parent
-// Group's rotation.x then spins the wheel, rotation.y steers it.
 function Wheel() {
   return (
     <>
