@@ -7,8 +7,8 @@
 // Renderer: WebGL2 by default for now. WebGPU upgrade planned (see STACK.md);
 // the renderer swap is a Canvas-prop change, not a code rewrite.
 
-import { useEffect } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Suspense, lazy, useEffect } from "react";
+import { Canvas } from "@react-three/fiber";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { Physics } from "@react-three/rapier";
 import World from "./scene/World";
@@ -22,34 +22,15 @@ import { useGame } from "./store";
 // ── Performance overlay — r3f-perf ──────────────────────────────────────────
 // Enabled in dev mode OR when ?perf=1 is in the URL (works in production too,
 // useful for diagnosing live perf issues without a local build).
-// Import is lazy so the ~20 KB r3f-perf bundle is NOT shipped in production
-// unless explicitly requested.
-import { Perf } from "r3f-perf";
+// Lazy-imported so the ~20 KB r3f-perf chunk is NOT in the main production
+// bundle unless explicitly requested. Vite code-splits it automatically.
 const SHOW_PERF =
   import.meta.env.DEV ||
   new URLSearchParams(window.location.search).has("perf");
 
-// ── RendererInfoExposer — exposes Three.js renderer.info to window ───────────
-// Used by Playwright perf tests to assert on draw calls + triangle counts
-// without needing to instrument the renderer directly.
-// Only mounted when needed (dev mode or ?perf=1).
-function RendererInfoExposer() {
-  const { gl } = useThree();
-  useEffect(() => {
-    if (!SHOW_PERF) return;
-    const id = setInterval(() => {
-      (window as unknown as Record<string, unknown>).__fixerRendererInfo = {
-        drawCalls: gl.info.render.calls,
-        triangles: gl.info.render.triangles,
-        points:    gl.info.render.points,
-        lines:     gl.info.render.lines,
-        textures:  gl.info.memory.textures,
-      };
-    }, 500); // update every 500ms — enough for tests, low overhead
-    return () => clearInterval(id);
-  }, [gl]);
-  return null;
-}
+const PerfOverlay = SHOW_PERF
+  ? lazy(() => import("./dev/PerfOverlay"))
+  : null;
 
 export default function App() {
   // Session-end telemetry — fires when player closes/navigates away mid-run.
@@ -93,9 +74,12 @@ export default function App() {
             <StoryWatcher />
           </Physics>
 
-          {/* Performance overlay — only in dev or ?perf=1 */}
-          {SHOW_PERF && <Perf position="top-left" />}
-          {SHOW_PERF && <RendererInfoExposer />}
+          {/* Performance overlay — only in dev or ?perf=1; lazy chunk */}
+          {SHOW_PERF && PerfOverlay && (
+            <Suspense fallback={null}>
+              <PerfOverlay />
+            </Suspense>
+          )}
         </Canvas>
       </div>
 

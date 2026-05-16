@@ -17,7 +17,8 @@
     "test:e2e:perf": "playwright test tests/e2e/perf.test.ts",
     "test:visual:baseline": "node tests/visual/baseline.mjs",
     "test:visual:compare": "node tests/visual/compare.mjs",
-    "test:visual:baseline:force": "node tests/visual/baseline.mjs --force"
+    "test:visual:baseline:force": "node tests/visual/baseline.mjs --force",
+    "hooks:install": "bash scripts/install-hooks.sh"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",
