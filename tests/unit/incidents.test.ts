@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { CANONICAL_2017 } from '../../src/story/incidents';
+import { ROUTE_START, ROUTE_END } from '../../src/scene/terrainFn';
 
 const { beats, endings, intro } = CANONICAL_2017;
 
@@ -17,15 +18,23 @@ describe('incidents — beat ordering', () => {
     }
   });
 
-  it('all beats fall within the run corridor (SPAWN_Z -100 → END_Z +120)', () => {
+  it('all beats fall within the run corridor (ROUTE_START → ROUTE_END)', () => {
     for (const beat of beats) {
-      expect(beat.triggerZ).toBeGreaterThan(-100);
-      expect(beat.triggerZ).toBeLessThan(120);
+      expect(beat.triggerZ).toBeGreaterThan(ROUTE_START);
+      expect(beat.triggerZ).toBeLessThan(ROUTE_END);
     }
   });
 
-  it('has at least 4 beats (enough pacing across 220m)', () => {
+  it('has at least 4 beats (enough pacing across the run)', () => {
     expect(beats.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('beats give the player reading room (≥80m ≈ 8s between any two)', () => {
+    // Run-3 playtest: casual players were too busy driving to absorb beats
+    // packed 30m apart. This pins the fix.
+    for (let i = 1; i < beats.length; i++) {
+      expect(beats[i].triggerZ - beats[i - 1].triggerZ).toBeGreaterThanOrEqual(80);
+    }
   });
 });
 
