@@ -18,6 +18,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
 import { heightAt, trackCenterX } from "./terrainFn";
+import { truckRef } from "./truckRef";
 
 // ── Palette — warm muted civilian clothing ─────────────────────────────────
 const COL_COAT_A    = "#5a4838";  // worn dark coat
@@ -48,21 +49,34 @@ interface PedSpec {
   phase: number;
 }
 
-// Hand-placed pedestrians along the 220m route (SPAWN_Z=-100 → END_Z=+120).
-// One every 30–45m, alternating sides, varied poses.
+// Hand-placed pedestrians along the 800m route (SPAWN_Z=-100 → END_Z=+700).
+// Sparse in the open stretches, denser toward the populated north end —
+// civilians returning to a city that's mostly rubble. The checkpoint zone
+// (z≈0) gets people walking AWAY from it: those who already passed through.
 const PEDS: PedSpec[] = [
-  // Near the spawn — first thing the player sees after leaving the checkpoint
-  { z: -65, sideOffset:  6,    facing: -Math.PI / 2, walkSpeed: 0.9, coat: COL_COAT_A, headscarf: true,  bag: true,  phase: 0.0 },
-  // Mid-route — walking toward the truck
-  { z: -20, sideOffset: -7,    facing:  Math.PI,     walkSpeed: 1.1, coat: COL_COAT_B, headscarf: false, bag: false, phase: 1.3 },
-  // Standing still, watching — beside a rubble pile
-  { z:  10, sideOffset:  8.5,  facing: -Math.PI / 2, walkSpeed: 0,   coat: COL_COAT_C, headscarf: true,  bag: false, phase: 0.0 },
-  // Walking the same way as the truck (player overtakes them)
-  { z:  45, sideOffset: -5.5,  facing:  0,           walkSpeed: 0.7, coat: COL_COAT_A, headscarf: false, bag: true,  phase: 2.1 },
-  // A pair near the end — one walking, one standing
-  { z:  88, sideOffset:  7,    facing: -Math.PI / 2, walkSpeed: 1.0, coat: COL_COAT_B, headscarf: true,  bag: false, phase: 0.7 },
-  { z:  92, sideOffset:  7.6,  facing:  Math.PI / 4, walkSpeed: 0,   coat: COL_COAT_C, headscarf: true,  bag: true,  phase: 0.0 },
+  // Near the spawn — the first figure the player sees
+  { z: -60, sideOffset:  6,    facing: -Math.PI / 2, walkSpeed: 0.9, coat: COL_COAT_A, headscarf: true,  bag: true,  phase: 0.0 },
+  // Walking south past the checkpoint — already through, heading out
+  { z: -38, sideOffset: -6.5,  facing:  Math.PI,     walkSpeed: 1.1, coat: COL_COAT_B, headscarf: false, bag: false, phase: 1.3 },
+  // Standing near the checkpoint, waiting — off the east shoulder
+  { z:  18, sideOffset:  7.5,  facing: -Math.PI / 2, walkSpeed: 0,   coat: COL_COAT_C, headscarf: true,  bag: true,  phase: 0.0 },
+  // The long middle — scattered single figures
+  { z:  95, sideOffset: -5.5,  facing:  0,           walkSpeed: 0.7, coat: COL_COAT_A, headscarf: false, bag: true,  phase: 2.1 },
+  { z: 180, sideOffset:  8,    facing: -Math.PI / 2, walkSpeed: 0,   coat: COL_COAT_B, headscarf: true,  bag: false, phase: 0.0 },
+  { z: 260, sideOffset: -7,    facing:  Math.PI,     walkSpeed: 1.0, coat: COL_COAT_C, headscarf: false, bag: false, phase: 0.6 },
+  { z: 340, sideOffset:  5.5,  facing:  0,           walkSpeed: 0.8, coat: COL_COAT_A, headscarf: true,  bag: true,  phase: 1.7 },
+  { z: 430, sideOffset: -8.5,  facing: -Math.PI / 2, walkSpeed: 0,   coat: COL_COAT_B, headscarf: true,  bag: false, phase: 0.0 },
+  { z: 505, sideOffset:  6.5,  facing:  Math.PI,     walkSpeed: 1.1, coat: COL_COAT_C, headscarf: false, bag: true,  phase: 2.8 },
+  // Approaching the city edge — pairs, more presence
+  { z: 580, sideOffset: -6,    facing:  0,           walkSpeed: 0.7, coat: COL_COAT_A, headscarf: true,  bag: true,  phase: 0.9 },
+  { z: 585, sideOffset: -7.2,  facing:  0,           walkSpeed: 0.7, coat: COL_COAT_B, headscarf: false, bag: false, phase: 2.3 },
+  { z: 645, sideOffset:  7,    facing: -Math.PI / 2, walkSpeed: 1.0, coat: COL_COAT_B, headscarf: true,  bag: false, phase: 0.7 },
+  { z: 652, sideOffset:  7.6,  facing:  Math.PI / 4, walkSpeed: 0,   coat: COL_COAT_C, headscarf: true,  bag: true,  phase: 0.0 },
 ];
+
+// Pedestrians further than this from the truck are hidden and skip their
+// animation — keeps the draw-call budget flat as the route grows.
+const CULL_DISTANCE = 280;
 
 // ── Reusable geometries ────────────────────────────────────────────────────
 const GEO_HEAD = new THREE.SphereGeometry(0.13, 10, 8);
@@ -88,6 +102,17 @@ function Pedestrian({ spec }: { spec: PedSpec }) {
 
   useFrame((state, dt) => {
     if (!root.current) return;
+
+    // Distance cull — far pedestrians are invisible anyway (fog) and don't
+    // need leg-swing updates. Uses the ped's CURRENT position (walkers drift
+    // up to 30m from their spawn z).
+    const rb = truckRef.current;
+    if (rb) {
+      const dz = Math.abs(root.current.position.z - rb.translation().z);
+      const visible = dz < CULL_DISTANCE;
+      if (root.current.visible !== visible) root.current.visible = visible;
+      if (!visible) return;
+    }
 
     // Total elapsed for leg-swing animation. Phase staggers multiple peds.
     const t = state.clock.elapsedTime + spec.phase;

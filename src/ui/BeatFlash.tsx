@@ -20,7 +20,7 @@ export default function BeatFlash() {
       setShown(false);
       // Clear text after the fade-out finishes so it doesn't re-flash.
       window.setTimeout(clearFlash, 400);
-    }, 4500);
+    }, 4700); // run-3 playtest: casual players caught fragments — longer hold
     return () => window.clearTimeout(t);
   }, [flashId, flashText, clearFlash]);
 

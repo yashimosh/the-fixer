@@ -71,6 +71,8 @@ test.describe('perf — scene budget', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await page.waitForSelector('button.title-incident--open', { timeout: 15_000 });
+    await page.click('button.title-incident--open');
     await page.waitForSelector(DRIVE_SELECTOR, { timeout: 15_000 });
     await page.waitForFunction(
       () => typeof (window as any).__fixerRecord === 'function',

@@ -13,6 +13,10 @@ export default function HUD() {
   const cargoTotal  = useGame(s => s.cargoTotal);
   const cargoSec    = useGame(s => s.cargoSecured);
   const phase       = useGame(s => s.phase);
+  const incident    = useGame(s => s.incident);
+
+  // The title screen owns the whole frame — no HUD over it.
+  if (phase === "title") return null;
 
   // Cargo dots — visible during run and on ending card, hidden on intro.
   const showCargo = phase !== "intro";
@@ -21,7 +25,7 @@ export default function HUD() {
     <>
       <div className="hud tl">
         <div className="k">the fixer</div>
-        <div className="v">West Mosul · June 2017</div>
+        <div className="v">{incident.place} · {incident.date}</div>
       </div>
 
       {showCargo && (

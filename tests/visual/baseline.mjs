@@ -43,6 +43,7 @@ const BROWSER_ARGS = [
 async function capture() {
   const browser = await chromium.launch({
     headless: false,
+    channel: process.env.PW_BROWSER_CHANNEL || undefined,
     args: BROWSER_ARGS,
   });
   const ctx  = await browser.newContext({ viewport: { width: 1280, height: 800 } });
@@ -52,6 +53,10 @@ async function capture() {
   page.on('console', () => {});
 
   await page.goto('http://localhost:5173', { waitUntil: 'domcontentloaded' });
+
+  // Click through the title screen (anthology list) to reach the intro card.
+  await page.waitForSelector('button.title-incident--open', { timeout: 20000 });
+  await page.click('button.title-incident--open');
 
   // Wait for React + physics to fully mount
   await page.waitForFunction(() => typeof window.__fixerRecord === 'function', null, { timeout: 20000 });

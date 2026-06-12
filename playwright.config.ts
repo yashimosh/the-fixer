@@ -13,12 +13,18 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 90_000,           // single test limit — full run takes 60s
+  timeout: 220_000,          // single test limit — the e2e drive bot needs ~130s
+                             // for the full 800m run, plus click-through + ending
   retries: 1,                // one retry on flake (physics timing varies slightly)
   reporter: [['list'], ['html', { open: 'never' }]],
 
   use: {
     baseURL: 'http://localhost:5173',
+    // Browser override: set PW_BROWSER_CHANNEL=msedge (or chrome) when the
+    // bundled Chromium won't start — e.g. WIN-LAPTOP fails with a
+    // "side-by-side configuration is incorrect" error on playwright build
+    // v1140. System Edge/Chrome render WebGL just as well for these tests.
+    channel: process.env.PW_BROWSER_CHANNEL || undefined,
     // headless: false gives access to real GPU compositing.
     // headless mode strips WebGL GPU acceleration; colours and physics differ.
     headless: false,

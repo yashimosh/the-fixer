@@ -19,10 +19,13 @@ import { useFrame } from "@react-three/fiber";
 import { truckRef } from "./truckRef";
 import { useGame } from "../store";
 import { shake } from "./shakeRef";
+import { ROUTE_END } from "./terrainFn";
 import { trackBeatRead, trackCargoLost, trackRunComplete } from "../telemetry";
 
-const END_Z            = 120;   // truck-z threshold for crossing into "after"
-const END_MIN_SECONDS  = 8;     // floor on run duration before ending fires
+const END_Z            = ROUTE_END; // truck-z threshold for crossing into "after"
+const END_MIN_SECONDS  = 40;    // floor on run duration before ending fires.
+                                // Flat-out the 800m run takes ~65s; 40s only
+                                // blocks teleport/glitch skips, never real play.
 const END_DELAY_AFTER  = 4;     // additional seconds past END_Z before card
 
 // Cargo-risk threshold — m/s. Driving faster than this when a cargoRisk

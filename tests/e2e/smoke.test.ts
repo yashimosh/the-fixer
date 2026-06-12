@@ -9,16 +9,38 @@
 // Run: npx playwright test tests/e2e/smoke.test.ts
 
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { CANONICAL_2017 } from '../../src/story/incidents';
+import { driveBot } from './driveBot';
 
 const DRIVE_SELECTOR = 'button.story-card-action';
+const TITLE_SELECTOR = 'button.title-incident--open';
 const BEAT_FLASH_SELECTOR = '.beat-flash';
+
+// The game now opens on the title screen (anthology incident list).
+// Click the playable incident to reach the intro card.
+async function gotoIntro(page: Page) {
+  await page.goto('/');
+  await page.waitForSelector(TITLE_SELECTOR, { timeout: 15_000 });
+  await page.click(TITLE_SELECTOR);
+  await page.waitForSelector(DRIVE_SELECTOR, { timeout: 15_000 });
+}
 
 test.describe('smoke — full run', () => {
 
-  test('intro card loads with correct title and DRIVE button', async ({ page }) => {
+  test('title screen lists the anthology and opens the playable incident', async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector(DRIVE_SELECTOR, { timeout: 15_000 });
+    await page.waitForSelector(TITLE_SELECTOR, { timeout: 15_000 });
+
+    // Six incidents listed, one open
+    await expect(page.locator('.title-incident')).toHaveCount(6);
+    await expect(page.locator(TITLE_SELECTOR)).toHaveCount(1);
+    await expect(page.locator('.title-screen')).toContainText('West Mosul');
+    await expect(page.locator('.title-screen')).toContainText('Sinjar');
+  });
+
+  test('intro card loads with correct title and DRIVE button', async ({ page }) => {
+    await gotoIntro(page);
 
     // Title visible
     await expect(page.locator('.hud.tl .k')).toContainText('the fixer');
@@ -36,8 +58,7 @@ test.describe('smoke — full run', () => {
   });
 
   test('clicking DRIVE starts the run and truck moves', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector(DRIVE_SELECTOR, { timeout: 15_000 });
+    await gotoIntro(page);
 
     // Wait for physics initialisation (captureHelper exposes __fixerRecord)
     await page.waitForFunction(() => typeof (window as any).__fixerRecord === 'function', { timeout: 15_000 });
@@ -55,8 +76,7 @@ test.describe('smoke — full run', () => {
   });
 
   test('all 6 beats fire in order when truck drives full route', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector(DRIVE_SELECTOR, { timeout: 15_000 });
+    await gotoIntro(page);
     await page.waitForFunction(() => typeof (window as any).__fixerRecord === 'function', { timeout: 15_000 });
     await page.click(DRIVE_SELECTOR);
 
@@ -75,10 +95,10 @@ test.describe('smoke — full run', () => {
       });
     });
 
-    // Hold W to drive the truck forward across all Z thresholds (~75 seconds at max)
-    await page.keyboard.down('w');
-    await page.waitForTimeout(75_000);
-    await page.keyboard.up('w');
+    // Drive the full route — the bot holds throttle and steers toward the
+    // centreline (a no-steer W-hold leaves the road on 800m of curves).
+    const result = await driveBot(page);
+    expect(result.timedOut, `bot timed out at z=${result.finalZ}`).toBe(false);
 
     // Collect recorded beats
     const beatLog: string[] = await page.evaluate(() => (window as any).__beatLog ?? []);
@@ -92,18 +112,16 @@ test.describe('smoke — full run', () => {
   });
 
   test('ending card appears after full run', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector(DRIVE_SELECTOR, { timeout: 15_000 });
+    await gotoIntro(page);
     await page.waitForFunction(() => typeof (window as any).__fixerRecord === 'function', { timeout: 15_000 });
     await page.click(DRIVE_SELECTOR);
 
-    await page.keyboard.down('w');
-    await page.waitForTimeout(75_000);
-    await page.keyboard.up('w');
+    const result = await driveBot(page);
+    expect(result.timedOut, `bot timed out at z=${result.finalZ}`).toBe(false);
 
     // Ending card should appear (phase → "ended")
     const endCard = page.locator('.story-card');
-    await expect(endCard).toBeVisible({ timeout: 10_000 });
+    await expect(endCard).toBeVisible({ timeout: 15_000 });
 
     // Should contain one of the ending-specific phrases
     const endText = await endCard.textContent();

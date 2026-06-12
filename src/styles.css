@@ -163,6 +163,82 @@ html, body, #root {
 .dot--on  { background: var(--accent); opacity: 0.55; }
 .dot--off { background: var(--fg);     opacity: 0.10; }
 
+/* Title screen — the anthology frame. The dawn scene idles behind it. */
+.title-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 11, 12, 0.86);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 600;
+}
+.title-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 32px;
+  min-width: 320px;
+}
+.title-name {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  margin-bottom: 2px;
+}
+.title-sub {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--fg-dim);
+  margin-bottom: 34px;
+}
+.title-incidents {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.title-incident {
+  display: grid;
+  grid-template-columns: 2.4em 1fr auto;
+  gap: 14px;
+  align-items: baseline;
+  width: 100%;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  color: inherit;
+}
+.title-incident .ti-n    { opacity: 0.35; font-size: 11px; }
+.title-incident .ti-date { opacity: 0.5;  font-size: 11px; letter-spacing: 0.08em; }
+.title-incident--locked {
+  opacity: 0.32;
+}
+.title-incident--open {
+  cursor: pointer;
+  border-color: rgba(232, 230, 225, 0.25);
+  transition: border-color 200ms, background 200ms;
+}
+.title-incident--open:hover {
+  border-color: var(--fg);
+  background: rgba(232, 230, 225, 0.05);
+}
+.title-incident--open .ti-place::after {
+  content: " →";
+  opacity: 0.5;
+}
+.title-foot {
+  margin-top: 30px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--fg-dim);
+}
+
 /* Beat flash — transient mid-run sentence. Sits high-center of the screen,
    fades in/out so the player can read without losing the road. */
 .beat-flash {

@@ -12,12 +12,20 @@
 // Run: npx playwright test tests/e2e/input-bot.test.ts
 
 import { test, expect } from '@playwright/test';
+import { driveBot } from './driveBot';
 
 const DRIVE_SELECTOR = 'button.story-card-action';
+const TITLE_SELECTOR = 'button.title-incident--open';
 
-// Helper: wait for physics + camera to settle (2s after DRIVE)
+// The path-following bot completes the 800m route in ~130s (it corrects
+// crudely at 7Hz; humans drive it faster). Budget with margin.
+const RUN_TIMEOUT = 170_000;
+
+// Helper: title → intro → DRIVE, then wait for physics + camera to settle.
 async function startRun(page: Parameters<typeof test>[1] extends infer P ? P : never) {
   await (page as any).goto('/');
+  await (page as any).waitForSelector(TITLE_SELECTOR, { timeout: 15_000 });
+  await (page as any).click(TITLE_SELECTOR);
   await (page as any).waitForSelector(DRIVE_SELECTOR, { timeout: 15_000 });
   await (page as any).waitForFunction(
     () => typeof (window as any).__fixerRecord === 'function',
@@ -27,18 +35,17 @@ async function startRun(page: Parameters<typeof test>[1] extends infer P ? P : n
   await (page as any).waitForTimeout(2_000); // physics settle
 }
 
-test.describe('input-bot — Racer (W held, fast run)', () => {
+test.describe('input-bot — Racer (flat-out, steers to the road)', () => {
 
-  test('truck reaches END_Z and ending fires within 65 seconds', async ({ page }) => {
+  test('truck reaches END_Z and ending fires within the run budget', async ({ page }) => {
     await startRun(page);
 
-    await page.keyboard.down('w');
+    const result = await driveBot(page, { maxMs: RUN_TIMEOUT });
+    expect(result.timedOut, `bot timed out at z=${result.finalZ}`).toBe(false);
 
-    // Wait for ending card (phase → "ended")
+    // Ending card (phase → "ended")
     const endCard = page.locator('.story-card');
-    const endingVisible = endCard.waitFor({ state: 'visible', timeout: 65_000 });
-    await endingVisible;
-    await page.keyboard.up('w');
+    await endCard.waitFor({ state: 'visible', timeout: 15_000 });
 
     await expect(endCard).toBeVisible();
     const endText = await endCard.textContent();
@@ -47,11 +54,9 @@ test.describe('input-bot — Racer (W held, fast run)', () => {
 
   test('racer loses at least 1 cargo item (speed > CARGO_RISK_SPEED at risk beats)', async ({ page }) => {
     await startRun(page);
-    await page.keyboard.down('w');
-
-    // Wait for ending
-    await page.locator('.story-card').waitFor({ state: 'visible', timeout: 65_000 });
-    await page.keyboard.up('w');
+    const result = await driveBot(page, { maxMs: RUN_TIMEOUT });
+    expect(result.timedOut, `bot timed out at z=${result.finalZ}`).toBe(false);
+    await page.locator('.story-card').waitFor({ state: 'visible', timeout: 15_000 });
 
     // Cargo dot count: at least one dot should be off (dim)
     const offDots = page.locator('.dot--off');
@@ -61,9 +66,9 @@ test.describe('input-bot — Racer (W held, fast run)', () => {
 
   test('racer run ends in "partial" or "failed" ending (not "clean")', async ({ page }) => {
     await startRun(page);
-    await page.keyboard.down('w');
-    await page.locator('.story-card').waitFor({ state: 'visible', timeout: 65_000 });
-    await page.keyboard.up('w');
+    const result = await driveBot(page, { maxMs: RUN_TIMEOUT });
+    expect(result.timedOut, `bot timed out at z=${result.finalZ}`).toBe(false);
+    await page.locator('.story-card').waitFor({ state: 'visible', timeout: 15_000 });
 
     const endText = await page.locator('.story-card').textContent();
     // Clean ending: "The piece runs in three weeks. Six pages"

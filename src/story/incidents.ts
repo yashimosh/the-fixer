@@ -7,6 +7,7 @@
 
 export interface IncidentText {
   id:    string;
+  place: string;        // location shown in the HUD ("West Mosul")
   date:  string;        // dateline shown in the intro card header
 
   /** Intro card paragraphs. First line is the dateline (small caps). */
@@ -27,8 +28,9 @@ export interface IncidentText {
 }
 
 export const CANONICAL_2017: IncidentText = {
-  id:   "west-mosul-2017",
-  date: "June 2017",
+  id:    "west-mosul-2017",
+  place: "West Mosul",
+  date:  "June 2017",
 
   intro: [
     "JUNE 2017 — OLD CITY",
@@ -40,40 +42,45 @@ export const CANONICAL_2017: IncidentText = {
     "Engine on at 04:47.",
   ],
 
-  // Beats are evenly spread across the 220 m run (SPAWN_Z -100 → END_Z +120).
+  // Beats are spread across the 800 m run (SPAWN_Z -100 → END_Z +700),
+  // one every ~150 m ≈ 15 s at touring pace — room to read while driving
+  // (run-3 playtest: casual players caught only fragments at the old density).
   // Each fires once. Tonal mix: logistics → grief → dark pause → civilian
   // cost → tactical awareness → ellipsis. Not all elegies. Not all death.
-  // Beats are evenly spread across the 220 m run (SPAWN_Z -100 → END_Z +120).
   // cargoRisk beats: beats 0, 2, 4 — checkpoint, radio, Hilux.
   // If truck speed > 8 m/s when a risk beat fires, one cargo item is lost.
   // This means: drive fast through a checkpoint = look suspicious, rush the
   // radio turn = journalist drops something, close the Hilux gap = near miss.
+  //
+  // World anchors (Rule 5 — the world tells the story): the checkpoint beat
+  // fires approaching the physical checkpoint set piece at z≈0; the Hilux
+  // beat fires while a scripted Hilux holds ~200 m ahead on the track.
   beats: [
     {
-      triggerZ: -75,
+      triggerZ: -25,
       cargoRisk: true,
       text: "The checkpoint has been here three weeks. The soldier waves you through with his cigarette. He knows the truck.",
     },
     {
-      triggerZ: -42,
+      triggerZ: +120,
       text: "Bakhtiyar took an IED in Old City three weeks ago. He'd been back a year — sniper in Fallujah, returned anyway. The videographer is the same age. Same build.",
     },
     {
-      triggerZ: -10,
+      triggerZ: +280,
       cargoRisk: true,
       text: "Your radio picks up Rudaw. You turn it off.",
     },
     {
-      triggerZ: +22,
+      triggerZ: +420,
       text: "Awat stopped driving in '15. Said he was tired. His wife runs the vegetable stall now, alone.",
     },
     {
-      triggerZ: +58,
+      triggerZ: +540,
       cargoRisk: true,
       text: "The Hilux ahead has a green flag in the window. You keep two hundred metres between you. Standard.",
     },
     {
-      triggerZ: +95,
+      triggerZ: +640,
       text: "Shifa Gardi. Rudaw. February. The camera she used that day is still in evidence somewhere.",
     },
   ],

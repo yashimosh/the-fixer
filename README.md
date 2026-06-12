@@ -2,7 +2,7 @@
 
 A narrative driving game about a Kurdish fixer working with foreign journalists during the war against ISIS (2014–2019). Player drives **Sor** through incidents — different years, different cargo, different stakes — across the mountain corridors of Iraqi Kurdistan and Rojava.
 
-**Status:** pre-production. Foundation and "hello world" only.
+**Status:** playable vertical slice. The canonical West Mosul (June 2017) incident runs end-to-end: title screen → intro card → 800 m drive through chunk-streamed terrain with six story beats, a checkpoint set piece, a scripted Hilux, visible cargo stakes → ending variant by cargo state.
 
 ## Stack
 
@@ -45,16 +45,33 @@ npm run preview
 src/
 ├── main.tsx                # React root
 ├── App.tsx                 # Top-level: Canvas + UI overlays
+├── store.ts                # Zustand game state (phase, cargo, beats)
 ├── styles.css              # Global styles
 ├── scene/
-│   ├── World.tsx           # 3D scene: lights, sky, ground, truck, camera
-│   ├── Truck.tsx           # Sor's vehicle (placeholder cuboid for now)
-│   ├── Ground.tsx          # Static ground plane
-│   ├── ChaseCamera.tsx     # Third-person camera follow
-│   └── truckRef.ts         # Shared mutable ref to truck rigid body
+│   ├── World.tsx           # 3D scene root: sky, lights, fog, components
+│   ├── terrainFn.ts        # Pure height/track/chunk functions — single source of truth
+│   ├── Terrain.tsx         # Chunk-streamed heightfield + trimesh colliders
+│   ├── sceneryFn.ts        # Per-chunk merged scenery geometry (walls/rubble/husks)
+│   ├── Truck.tsx           # Rapier raycast vehicle + Sor silhouette + visible cargo
+│   ├── Checkpoint.tsx      # Set piece anchoring the first cargo-risk beat
+│   ├── Hilux.tsx           # Scripted vehicle ahead (third cargo-risk beat)
+│   ├── SunLight.tsx        # Dawn sun whose shadow frustum follows the truck
+│   ├── Pedestrians.tsx     # Civilians along the route, distance-culled
+│   ├── ChaseCamera.tsx     # Third-person follow + speed FOV + landing shake
+│   ├── StoryWatcher.tsx    # Beat triggers, cargo-risk checks, ending sequencing
+│   ├── EngineAudio.tsx     # Procedural engine pitch (Tone.js)
+│   ├── AmbientAudio.tsx    # Wind + distant rumble room tone
+│   ├── PostFX.tsx          # Bloom + vignette
+│   ├── truckRef.ts         # Shared mutable ref to truck rigid body
+│   └── shakeRef.ts         # Camera shake channel
+├── story/
+│   └── incidents.ts        # Incident data: intro / beats / ending variants
 ├── input/
 │   └── useKeys.ts          # Keyboard input hook
 └── ui/
+    ├── TitleScreen.tsx     # Anthology incident list (one playable, five locked)
+    ├── StoryCard.tsx       # Intro + ending overlay
+    ├── BeatFlash.tsx       # Transient mid-run beat text
     └── HUD.tsx             # Minimal four-corner HUD
 ```
 
@@ -71,13 +88,17 @@ The active brain folder for design / research / story / character is at `~/claud
 
 ## Roadmap
 
-1. **Hello world (this commit):** Sor's truck on flat ground, drives with WASD, chase camera follows.
-2. Replace placeholder cuboid with real truck silhouette + materials.
-3. Rapier vehicle controller (proper wheels, suspension, traction model).
-4. Heightfield terrain via pure-function sampling.
-5. Chunk streaming from day one.
-6. Sor's cabin presence (hands on wheel, tasbih, scarf).
-7. Story system port from Border Run (intro / mid-run / ending cards in React).
-8. Canonical 2017 Mosul incident as the first complete playable run.
-9. Web deploy at `thefixer.yashimosh.com` (Coolify on Hetzner).
-10. Tauri wrap for Steam page (eventual).
+1. ~~Hello world: Sor's truck on flat ground, drives with WASD, chase camera follows.~~ ✅
+2. ~~Replace placeholder cuboid with real truck silhouette + materials.~~ ✅
+3. ~~Rapier vehicle controller (proper wheels, suspension, traction model).~~ ✅
+4. ~~Heightfield terrain via pure-function sampling.~~ ✅
+5. ~~Chunk streaming.~~ ✅ (100 m slabs, merged per-chunk scenery, fog-hidden pop-in)
+6. ~~Sor's cabin presence.~~ ✅ (silhouette at the wheel, tasbih, glasshouse cabin)
+7. ~~Story system port from Border Run (intro / mid-run / ending cards in React).~~ ✅
+8. ~~Canonical 2017 Mosul incident as the first complete playable run.~~ ✅ (800 m, checkpoint + Hilux world anchors, visible cargo)
+9. Radio per year (music as character signal — needs licensed/original audio).
+10. Photo mode (Sor leans on the truck — the moment the visual reference matters most).
+11. Route divergence (run-3 playtest designer pick: shortcut = all risk beats flagged).
+12. Remaining five incidents as data over the generic route system.
+13. Web deploy at `thefixer.yashimosh.com` (Coolify on Hetzner) — GitHub Pages deploy exists.
+14. Tauri wrap for Steam page (eventual).
