@@ -7,3 +7,10 @@ dist/
 Thumbs.db
 *.log
 *.tsbuildinfo
+
+# one-off visual verification screenshots
+scripts/.verify-shots/
+
+# playwright artifacts
+test-results/
+playwright-report/

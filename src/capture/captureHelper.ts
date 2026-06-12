@@ -290,6 +290,14 @@ setupCapture();
 
   setTimeout(async () => {
     try {
+      // Click through the title screen if still showing (anthology list)
+      const titleBtn = document.querySelector<HTMLButtonElement>("button.title-incident--open");
+      if (titleBtn) {
+        titleBtn.click();
+        console.info("[fixer] autoplay: title incident clicked");
+        await new Promise(r => setTimeout(r, 400)); // intro card mount
+      }
+
       // Click DRIVE button if still showing
       const btn = document.querySelector<HTMLButtonElement>("button.story-card-action");
       if (btn) { btn.click(); console.info("[fixer] autoplay: DRIVE clicked"); }
