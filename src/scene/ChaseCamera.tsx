@@ -19,12 +19,20 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Vector3, Quaternion, PerspectiveCamera } from "three";
 import { truckRef } from "./truckRef";
 import { shake } from "./shakeRef";
+import { heightAt } from "./terrainFn";
 
-// Camera sits 11m behind the truck, 4m above.
-// Look target is 7m ahead, 1.5m above ground level — keeps terrain in shot
-// while showing sky at top. Reference: Over the Hill, Bruno Simon.
-const OFFSET_LOCAL  = new Vector3(0, 4.0, 11);
-const LOOK_LOCAL    = new Vector3(0, -1.5, -7);
+// Camera sits 11m behind the truck, 4m above; look target 7m ahead, slightly
+// below — keeps terrain in shot while showing sky at top. Reference:
+// Over the Hill, Bruno Simon.
+//
+// CONVENTION (matches Truck.tsx since the raycast-vehicle rewrite):
+// chassis +Z = FORWARD. Behind the truck is local -Z, ahead is +Z. The old
+// offsets (+11 / -7) were written for the pre-rewrite spawn-rotated truck
+// and silently inverted when the rotation was removed — the camera sat in
+// FRONT of the truck looking at the road already travelled (caught by the
+// 2026-06-12 visual verification; e2e tests can't see camera direction).
+const OFFSET_LOCAL  = new Vector3(0, 4.0, -11);
+const LOOK_LOCAL    = new Vector3(0, -1.5, 7);
 const FOLLOW_LERP   = 6.5;   // pos lerp rate (was 4.5 — tighter = more glued)
 // LOOK_LERP reserved — lookAt() applied directly each frame is smooth enough
 // const LOOK_LERP     = 7.0;
@@ -72,15 +80,29 @@ export default function ChaseCamera() {
     }
     prevVy.current = vy;
 
-    // ── Camera position: offset rotated by FULL truck quaternion ─────────
-    // (includes pitch over crests, not just yaw). Camera tilts with the truck.
-    _desiredPos.copy(OFFSET_LOCAL).applyQuaternion(_truckQuat).add(_truckPos);
+    // ── Camera position: offset rotated by YAW ONLY ──────────────────────
+    // Full-quaternion offsets were tried ("camera tilts with the truck over
+    // crests") — with a light arcade body that micro-pitches constantly, the
+    // offset whips the camera around and into hillsides. Yaw-only keeps the
+    // camera planted behind the heading; pitch/roll never propagate.
+    const fwdX = 2 * (_truckQuat.x * _truckQuat.z + _truckQuat.w * _truckQuat.y);
+    const fwdZ = 1 - 2 * (_truckQuat.x * _truckQuat.x + _truckQuat.y * _truckQuat.y);
+    const yaw = Math.atan2(fwdX, fwdZ);
+    const sinY = Math.sin(yaw), cosY = Math.cos(yaw);
+    const rot = (v: Vector3, out: Vector3) =>
+      out.set(v.x * cosY + v.z * sinY, v.y, -v.x * sinY + v.z * cosY);
+
+    rot(OFFSET_LOCAL, _desiredPos).add(_truckPos);
+
+    // Terrain clearance — never let the camera dip into a hillside.
+    const minY = heightAt(_desiredPos.x, _desiredPos.z) + 1.4;
+    if (_desiredPos.y < minY) _desiredPos.y = minY;
 
     const posK = 1 - Math.exp(-FOLLOW_LERP * dt);
     camera.position.lerp(_desiredPos, posK);
 
     // ── Look target ──────────────────────────────────────────────────────
-    _lookTarget.copy(LOOK_LOCAL).applyQuaternion(_truckQuat).add(_truckPos);
+    rot(LOOK_LOCAL, _lookTarget).add(_truckPos);
     camera.lookAt(_lookTarget);
 
     // ── Speed-based FOV ──────────────────────────────────────────────────
