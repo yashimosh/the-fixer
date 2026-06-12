@@ -16,6 +16,7 @@ import StoryWatcher from "./scene/StoryWatcher";
 import HUD from "./ui/HUD";
 import StoryCard from "./ui/StoryCard";
 import BeatFlash from "./ui/BeatFlash";
+import TitleScreen from "./ui/TitleScreen";
 import { trackSessionEnd } from "./telemetry";
 import { useGame } from "./store";
 
@@ -68,7 +69,12 @@ export default function App() {
           }}
           dpr={[1, 1.75]} // device pixel ratio cap; matches Border Run's perf budget
         >
-          <Physics gravity={[0, -12, 0]} timeStep="vary">
+          {/* Fixed timestep: timeStep="vary" integrated dt spikes (first
+              frame after load ≈ 0.5–1s) in ONE step — the truck's 0.6m spawn
+              drop became a multi-metre punch through the terrain and the
+              depenetration launched it 25m up (flaky, load-timing dependent).
+              Fixed 1/60 turns slow frames into slow-motion instead. */}
+          <Physics gravity={[0, -12, 0]} timeStep={1 / 60}>
             <World />
             {/* Reads truck z each frame, fires beats and the ending. */}
             <StoryWatcher />
@@ -87,6 +93,7 @@ export default function App() {
       <HUD />
       <BeatFlash />
       <StoryCard />
+      <TitleScreen />
     </>
   );
 }

@@ -13,7 +13,7 @@ import type { IncidentText } from "./story/incidents";
 import { CANONICAL_2017 } from "./story/incidents";
 import { trackSessionStart } from "./telemetry";
 
-export type StoryPhase = "intro" | "running" | "ended";
+export type StoryPhase = "title" | "intro" | "running" | "ended";
 
 export interface GameState {
   // Current incident (canonical 2017 Mosul for now)
@@ -35,8 +35,9 @@ export interface GameState {
   flashId:   number;
 
   // Phase transitions
-  startRun: () => void;
-  endRun:   (state: "clean" | "partial" | "failed") => void;
+  openIntro: () => void;   // title → intro (incident selected)
+  startRun:  () => void;   // intro → running (DRIVE clicked)
+  endRun:    (state: "clean" | "partial" | "failed") => void;
   endingState: "clean" | "partial" | "failed" | null;
 
   // Mid-run beat broadcasting
@@ -50,7 +51,7 @@ export interface GameState {
 
 export const useGame = create<GameState>((set, get) => ({
   incident:     CANONICAL_2017,
-  phase:        "intro",
+  phase:        "title",
   cargoTotal:   4,
   cargoSecured: 4,
   endingState:  null,
@@ -59,6 +60,7 @@ export const useGame = create<GameState>((set, get) => ({
 
   loseCargoItem: () => set((s) => ({ cargoSecured: Math.max(0, s.cargoSecured - 1) })),
 
+  openIntro: () => set({ phase: "intro" }),
   startRun: () => {
     trackSessionStart();
     set({ phase: "running" });
@@ -71,3 +73,9 @@ export const useGame = create<GameState>((set, get) => ({
   speedKmh: 0,
   setSpeed: (kmh) => set({ speedKmh: kmh }),
 }));
+
+// Expose the store for E2E tests (smoke test intercepts showBeat) and
+// console debugging. Tiny, harmless in production.
+if (typeof window !== "undefined") {
+  (window as unknown as Record<string, unknown>).__fixer_store = { useGame };
+}

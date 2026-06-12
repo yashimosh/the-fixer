@@ -18,7 +18,9 @@ export default function StoryCard() {
   const ending   = useGame(s => s.endingState);
   const startRun = useGame(s => s.startRun);
 
-  if (phase === "running") return null;
+  // The card only exists for the intro and the ending — the title screen
+  // and the run itself render nothing here.
+  if (phase !== "intro" && phase !== "ended") return null;
 
   let lines: string[] = [];
   let action: string  = "drive";
