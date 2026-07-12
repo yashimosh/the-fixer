@@ -1,0 +1,22 @@
+{
+	"id": "west-mosul-2017",
+	"title": "West Mosul — The Old City",
+	"year": 2017,
+	"introText": "April 2017. The old city is mostly bricks now.\nYou drove a French team in last week. They were yours all morning.\nThis one is alone. American. Doesn't speak Arabic. You don't know him.\nTwo camera cases. A satellite phone. Body armour he hasn't worn yet.\nEngine on at 04:47. The streets are still empty.",
+	"beats": [
+		{
+			"triggerDistanceMeters": 800,
+			"text": "The Hilux took a JDAM in March. Two were inside.\nCoalition said they had clearance."
+		}
+	],
+	"endings": [
+		{
+			"key": "clean",
+			"text": "You drop him at the Divan. He flies to London Friday.\nThe piece runs in three weeks. Six pages.\nYou drive home to Ankawa.\nThe phone rings at 02:00 on Sunday. Another one is in tonight."
+		},
+		{
+			"key": "failed",
+			"text": "She doesn't get interviewed.\nSomeone else, somewhere else, eventually does.\nThe world will catch up to her in its own time."
+		}
+	]
+}
