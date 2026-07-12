@@ -8,8 +8,18 @@ USorWheelFront::USorWheelFront()
 	bAffectedByBrake = true;
 	bAffectedByHandbrake = false;
 	MaxSteerAngle = 38.f;
-	WheelRadius = 39.f;   // ~31-inch tyre in cm
-	WheelWidth = 24.f;
-	SuspensionMaxRaise = 12.f;
-	SuspensionMaxDrop = 12.f;
+
+	WheelRadius = 50.f;
+	WheelWidth = 40.f;
+	CorneringStiffness = 750.f;
+	FrictionForceMultiplier = 4.f;
+	WheelLoadRatio = 1.f;
+
+	SuspensionMaxRaise = 20.f;
+	SuspensionMaxDrop = 20.f;
+	SpringRate = 100.f;
+	SpringPreload = 100.f;
+	SweepShape = ESweepShape::Shapecast;
+
+	MaxBrakeTorque = 3000.f;
 }
