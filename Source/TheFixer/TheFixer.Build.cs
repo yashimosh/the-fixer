@@ -20,7 +20,8 @@ public class TheFixer : ModuleRules
 			"JsonUtilities",
 			"UMG",
 			"Slate",
-			"SlateCore"
+			"SlateCore",
+			"ProceduralMeshComponent"
 		});
 	}
 }
