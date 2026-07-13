@@ -26,8 +26,14 @@ public:
 	ATerrainSlice();
 
 	// Extent along the driving axis (X) and across it (Y), in cm.
+	// 3000m gives real margin over the west-mosul-2017 incident's 900m
+	// ending distance — the vehicle was observed falling off the edge of
+	// the previous 1000m slice under sustained autodrive during terrain
+	// verification. True chunk streaming (spawn/despawn slices around the
+	// player) is a separate, deferred item for when routes need to scale
+	// past what one mesh can reasonably hold.
 	UPROPERTY(EditAnywhere, Category = "Terrain")
-	float LengthCm = 100000.f;
+	float LengthCm = 300000.f;
 
 	UPROPERTY(EditAnywhere, Category = "Terrain")
 	float WidthCm = 20000.f;

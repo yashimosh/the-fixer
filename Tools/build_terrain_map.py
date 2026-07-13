@@ -17,25 +17,27 @@ MAP_PATH = "/Game/Maps/Sandbox_Terrain"
 les = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 eas = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 
-# The editor tends to reopen the last-edited level on launch rather than
-# EditorStartupMap, so if Sandbox_Terrain is already the active level,
-# deleting its own package out from under itself is what crashes/hangs
-# the process. Switch to a different, stable map first.
-current_world_name = eas.get_editor_world().get_name()
-unreal.log(f"current world at script start -> {current_world_name}")
-if current_world_name == MAP_PATH.rsplit("/", 1)[-1]:
-    unreal.log("Sandbox_Terrain is the active level — switching to Sandbox_Flat first")
-    load_ok = les.load_level("/Game/Maps/Sandbox_Flat")
-    unreal.log(f"load_level(Sandbox_Flat) -> {load_ok}")
-
+# Delete-the-package-then-new_level-at-the-same-path is unreliable:
+# EditorAssetLibrary.delete_asset() reports success, but the Asset
+# Registry's cache doesn't reliably reflect the deletion in time (even
+# after an explicit GC pass — confirmed via does_asset_exist() still
+# returning True right after), so new_level() fails validation with
+# "An asset already exists at this location". Editing the level IN
+# PLACE — load it if it exists, clear its actors, save over the same
+# file — sidesteps the whole delete/recreate race.
 if unreal.EditorAssetLibrary.does_asset_exist(MAP_PATH):
-    deleted = unreal.EditorAssetLibrary.delete_asset(MAP_PATH)
-    unreal.log(f"delete existing map -> {deleted}")
-
-created = les.new_level(MAP_PATH)
-unreal.log(f"new_level -> {created}")
-if not created:
-    raise RuntimeError("new_level failed")
+    loaded = les.load_level(MAP_PATH)
+    unreal.log(f"load_level(existing Sandbox_Terrain) -> {loaded}")
+    if not loaded:
+        raise RuntimeError("load_level on existing Sandbox_Terrain failed")
+    for actor in eas.get_all_level_actors():
+        eas.destroy_actor(actor)
+    unreal.log(f"cleared existing actors -> {len(eas.get_all_level_actors())} remaining")
+else:
+    created = les.new_level(MAP_PATH)
+    unreal.log(f"new_level -> {created}")
+    if not created:
+        raise RuntimeError("new_level failed")
 
 # Terrain — one slice, constructor defaults already match this map's scale
 # (1000m along the driving axis x 200m across, 6m cells).
