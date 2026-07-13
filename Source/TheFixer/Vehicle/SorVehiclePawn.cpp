@@ -161,6 +161,17 @@ void ASorVehiclePawn::Tick(float DeltaSeconds)
 		GetVehicleMovementComponent()->SetThrottleInput(1.f);
 		bHasStartedDriving = true;
 
+		if (bAutoCrash)
+		{
+			// Steer off the smooth corridor into the rising mountain flank
+			// (see FixerTerrain::SampleFlankHeightCm) to produce a real
+			// chassis-terrain collision for impact-damage calibration —
+			// ordinary driving doesn't fire OnComponentHit at all (Chaos
+			// vehicle suspension handles wheel-terrain contact via
+			// raycasts, not chassis rigid-body collision).
+			GetVehicleMovementComponent()->SetSteeringInput(0.6f);
+		}
+
 		// Debug telemetry stays throttled to ~2s regardless of tick rate, so
 		// the rollover/damage logic above can run every frame without
 		// spamming the log — matches the -SorAutoDrive verification pattern
@@ -206,6 +217,17 @@ void ASorVehiclePawn::TickRolloverDamage(float DeltaSeconds)
 void ASorVehiclePawn::OnChassisHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	FVector NormalImpulse, const FHitResult& Hit)
 {
+	const float ImpulseSize = NormalImpulse.Size();
+	if (bAutoCrash)
+	{
+		// Unconditional (bypasses cooldown/threshold) so a calibration
+		// run can observe the actual range of impulse magnitudes a real
+		// collision produces, not just whichever ones already clear a
+		// guessed threshold.
+		UE_LOG(LogTemp, Log, TEXT("[SorVehicle] RAW impact impulse: %.0f (against %s)"),
+			ImpulseSize, OtherActor ? *OtherActor->GetName() : TEXT("world"));
+	}
+
 	if (SecondsSinceLastImpactDamage < ImpactDamageCooldownSeconds)
 	{
 		// A scrape re-fires OnComponentHit across physics substeps, not
@@ -213,7 +235,6 @@ void ASorVehiclePawn::OnChassisHit(UPrimitiveComponent* HitComp, AActor* OtherAc
 		// damage many times in a fraction of a second.
 		return;
 	}
-	const float ImpulseSize = NormalImpulse.Size();
 	if (ImpulseSize > ImpactDamageThresholdImpulse)
 	{
 		ApplyCargoDamage((ImpulseSize - ImpactDamageThresholdImpulse) * ImpactDamageScale, TEXT("impact"));
@@ -240,6 +261,7 @@ void ASorVehiclePawn::BeginPlay()
 	Super::BeginPlay();
 
 	bAutoDrive = FParse::Param(FCommandLine::Get(), TEXT("SorAutoDrive"));
+	bAutoCrash = FParse::Param(FCommandLine::Get(), TEXT("SorAutoCrash"));
 
 	// Dev tooling: force the "failed" ending path to be reachable for
 	// verification without depending on scripted physics actually landing

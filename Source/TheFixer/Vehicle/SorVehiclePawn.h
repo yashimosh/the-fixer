@@ -49,6 +49,7 @@ public:
 
 private:
 	bool bAutoDrive = false;
+	bool bAutoCrash = false; // -SorAutoCrash: also steers off the corridor into the mountain flank, for calibration testing
 	bool bHasStartedDriving = false;
 
 	float CargoIntegrity = 100.f;
@@ -57,11 +58,26 @@ private:
 	float SecondsSinceLastImpactDamage = 1000.f;
 
 	// Impact impulse below this is normal driving contact (kerbs, small
-	// bumps) and does no damage; only genuinely hard hits count. Measured
-	// empirically (see Tools/build_terrain_map.py-adjacent drive tests):
-	// a deliberate ~40 km/h wall hit at Mass=2400.f produces NormalImpulse
-	// magnitudes in the 700k-1.2M range; normal driving/kerb contact stays
-	// under ~150k. Threshold sits well clear of both.
+	// bumps) and does no damage; only genuinely hard hits count.
+	// TODO(calibration): still not measured against a real collision —
+	// two attempts, two different negative results, both informative:
+	// (1) a full clean-run drive test held CargoIntegrity at exactly
+	// 100.0 throughout normal driving, including over uneven terrain —
+	// routine wheel-terrain contact never fires OnComponentHit at all.
+	// (2) a -SorAutoCrash test (steers off the corridor into the rising
+	// mountain flank at speed) produced ZERO "[SorVehicle] RAW impact
+	// impulse" log lines despite the vehicle genuinely climbing rough
+	// terrain (Z swung from -594 to +695) and eventually getting stuck
+	// wedged on the slope (speed dropped to ~0, wheels still grounded).
+	// Chaos vehicle suspension absorbs wheel-terrain interaction entirely
+	// via raycasts, even on steep off-corridor terrain — it never
+	// produces a chassis rigid-body collision. Conclusion: impact damage
+	// in this system can only ever come from discrete obstacles/props
+	// (rocks, walls, other vehicles), not terrain of any steepness.
+	// There's no obstacle geometry in the test scene yet, so this can't
+	// be calibrated further until one exists. Placeholder values stand;
+	// -SorAutoCrash and the raw-impulse log are kept as dev tooling for
+	// whenever a real obstacle test becomes possible.
 	static constexpr float ImpactDamageThresholdImpulse = 400000.f;
 	static constexpr float ImpactDamageScale = 0.00004f;
 
