@@ -145,9 +145,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> HandbrakeAction;
 
+	// Available at any time, not just after the ending — off-corridor
+	// terrain can wedge the vehicle with no way to recover otherwise
+	// (observed directly during impact-damage calibration testing).
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> ResetAction;
+
 	void OnThrottle(const FInputActionValue& Value);
 	void OnBrake(const FInputActionValue& Value);
 	void OnSteer(const FInputActionValue& Value);
 	void OnHandbrakePressed(const FInputActionValue& Value);
 	void OnHandbrakeReleased(const FInputActionValue& Value);
+	void OnReset(const FInputActionValue& Value);
 };

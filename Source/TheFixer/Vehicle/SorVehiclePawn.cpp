@@ -14,6 +14,7 @@
 #include "Engine/StaticMesh.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
+#include "Kismet/GameplayStatics.h"
 #include "InputMappingContext.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -94,6 +95,8 @@ ASorVehiclePawn::ASorVehiclePawn()
 	if (IaSteering.Succeeded()) { SteerAction = IaSteering.Object; }
 	static ConstructorHelpers::FObjectFinder<UInputAction> IaHandbrake(TEXT("/Game/VehicleTemplate/Input/Actions/IA_Handbrake"));
 	if (IaHandbrake.Succeeded()) { HandbrakeAction = IaHandbrake.Object; }
+	static ConstructorHelpers::FObjectFinder<UInputAction> IaReset(TEXT("/Game/VehicleTemplate/Input/Actions/IA_Reset"));
+	if (IaReset.Succeeded()) { ResetAction = IaReset.Object; }
 
 	UChaosWheeledVehicleMovementComponent* Movement =
 		CastChecked<UChaosWheeledVehicleMovementComponent>(GetVehicleMovementComponent());
@@ -315,6 +318,10 @@ void ASorVehiclePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 		Input->BindAction(HandbrakeAction, ETriggerEvent::Started, this, &ASorVehiclePawn::OnHandbrakePressed);
 		Input->BindAction(HandbrakeAction, ETriggerEvent::Completed, this, &ASorVehiclePawn::OnHandbrakeReleased);
 	}
+	if (ResetAction)
+	{
+		Input->BindAction(ResetAction, ETriggerEvent::Started, this, &ASorVehiclePawn::OnReset);
+	}
 }
 
 void ASorVehiclePawn::OnThrottle(const FInputActionValue& Value)
@@ -345,4 +352,14 @@ void ASorVehiclePawn::OnHandbrakePressed(const FInputActionValue& Value)
 void ASorVehiclePawn::OnHandbrakeReleased(const FInputActionValue& Value)
 {
 	GetVehicleMovementComponent()->SetHandbrakeInput(false);
+}
+
+void ASorVehiclePawn::OnReset(const FInputActionValue& Value)
+{
+	// A full level reload rather than repositioning the pawn — resets
+	// every piece of run state (GameMode's distance tracking and fired
+	// beats, cargo integrity, the story card) in one place instead of
+	// needing each system to know how to reset itself.
+	UE_LOG(LogTemp, Log, TEXT("[SorVehicle] reset requested — reloading level"));
+	UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()));
 }
