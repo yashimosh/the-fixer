@@ -2,6 +2,8 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Story/IncidentSubsystem.h"
 #include "UI/StoryCardWidget.h"
 #include "Vehicle/SorVehiclePawn.h"
@@ -19,6 +21,14 @@ ATheFixerGameMode::ATheFixerGameMode()
 void ATheFixerGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Command-line override so both incidents can be picked without a full
+	// anthology-selection system yet: -Incident=sinjar-2014
+	FString IncidentOverride;
+	if (FParse::Value(FCommandLine::Get(), TEXT("Incident="), IncidentOverride))
+	{
+		IncidentId = IncidentOverride;
+	}
 
 	// The player pawn is possessed during world start-up, just before level
 	// actors' BeginPlay runs — but give it one tick of slack rather than

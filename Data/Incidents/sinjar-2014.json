@@ -1,0 +1,24 @@
+{
+	"id": "sinjar-2014",
+	"title": "Sinjar — The First Time",
+	"year": 2014,
+	"introText": "August 2014. Sinjar fell six days ago.\nYou've fixed twice before.\nA photographer this time. British. First trip to Kurdistan.\nCamera gear. A water canister. A satellite phone. Food for two days. No body armour.\nEngine on at 03:20. The road north is already full.",
+	"beats": [
+		{
+			"triggerDistanceMeters": 400,
+			"text": "Mount Sinjar is visible now, even at this distance.\nTens of thousands are still up there. The corridor is still open — for now."
+		}
+	],
+	"endings": [
+		{
+			"key": "clean",
+			"text": "You reach the corridor before the light gets hard. He photographs the line for an hour.\nDays later, the paper runs six of his frames on page one.\nYou drive back to Erbil past a checkpoint you've already crossed twice today.\nAnother call comes Thursday."
+		},
+		{
+			"key": "failed",
+			"text": "The corridor closes before you reach it — peshmerga wave you back, no explanation given.\nHe photographs the closed checkpoint instead — a soldier's boots, a stalled convoy. Nothing that runs.\nThe evacuation continues without him watching."
+		}
+	],
+	"endingDistanceMeters": 900,
+	"minimumRunSeconds": 8
+}
