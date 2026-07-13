@@ -1,0 +1,24 @@
+{
+	"id": "east-mosul-2016",
+	"title": "East Mosul — The Offensive Begins",
+	"year": 2016,
+	"introText": "October 2016. The offensive opened yesterday.\nYou take a freelancer in on the second day. American. First war.\nA consumer DSLR. A MacBook. No satellite phone. Two hundred dollars in cash.\nEngine on at 05:10. Press plates outnumber everything else on the road south.",
+	"beats": [
+		{
+			"triggerDistanceMeters": 400,
+			"text": "Four car bombs hit the convoy this morning, before you were even on the road.\nTraffic control cleared the route by nine."
+		}
+	],
+	"endings": [
+		{
+			"key": "clean",
+			"text": "You drop him back in Erbil after dark. He doesn't know yet if any of it sells.\nA piece runs in Harper's six weeks later — six hundred words, his byline, buried in the back of the issue."
+		},
+		{
+			"key": "failed",
+			"text": "The footage doesn't sell. Every desk already has convoy video from the first day.\nHe flies home in December. The DSLR goes back to a pawn shop in Ohio before New Year's."
+		}
+	],
+	"endingDistanceMeters": 900,
+	"minimumRunSeconds": 8
+}
