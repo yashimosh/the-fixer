@@ -122,17 +122,25 @@ void ATheFixerGameMode::ShowBeat(const FIncidentBeat& Beat)
 
 void ATheFixerGameMode::ShowEnding()
 {
-	// Cargo state isn't tracked yet, so every run resolves clean — matches
-	// the web prototype's documented current behaviour.
-	const FIncidentEnding* CleanEnding = CurrentIncident.Endings.FindByPredicate(
-		[](const FIncidentEnding& E) { return E.Key == TEXT("clean"); });
-	if (!CleanEnding)
+	// Cargo determines outcome, per the incident design: below the
+	// threshold, whatever the run was carrying (footage, testimony,
+	// equipment) didn't survive the drive intact.
+	const float CargoIntegrity = TrackedVehicle->GetCargoIntegrity();
+	const FString EndingKey = CargoIntegrity >= CargoIntegrityCleanThreshold ? TEXT("clean") : TEXT("failed");
+	UE_LOG(LogFixerRun, Log, TEXT("[Run] ending resolved '%s' (cargo integrity %.1f)"), *EndingKey, CargoIntegrity);
+
+	const FIncidentEnding* Ending = CurrentIncident.Endings.FindByPredicate(
+		[&EndingKey](const FIncidentEnding& E) { return E.Key == EndingKey; });
+	// Set the gate regardless of whether a matching ending was found — a
+	// missing/misspelled key should log once and no-op, not leave Tick()'s
+	// "!bEndingShown" gate open so ShowEnding() retries every frame forever.
+	bEndingShown = true;
+	if (!Ending)
 	{
-		UE_LOG(LogFixerRun, Warning, TEXT("Incident '%s' has no 'clean' ending — no ending card shown."), *IncidentId);
+		UE_LOG(LogFixerRun, Warning, TEXT("Incident '%s' has no '%s' ending — no ending card shown."), *IncidentId, *EndingKey);
 		return;
 	}
-	bEndingShown = true;
-	CardWidget->ShowCard(CleanEnding->Text, 0.f);
+	CardWidget->ShowCard(Ending->Text, 0.f);
 }
 
 float ATheFixerGameMode::GetDistanceDrivenMeters() const

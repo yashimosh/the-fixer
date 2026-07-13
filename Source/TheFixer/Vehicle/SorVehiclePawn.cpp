@@ -4,8 +4,10 @@
 #include "Camera/CameraComponent.h"
 #include "ChaosVehicleMovementComponent.h"
 #include "ChaosWheeledVehicleMovementComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/HitResult.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/SkeletalMesh.h"
@@ -143,26 +145,93 @@ ASorVehiclePawn::ASorVehiclePawn()
 	Movement->Mass = 2400.f;
 
 	PrimaryActorTick.bCanEverTick = true;
-	SetActorTickInterval(2.f);
+
+	GetMesh()->OnComponentHit.AddDynamic(this, &ASorVehiclePawn::OnChassisHit);
 }
 
 void ASorVehiclePawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	TickRolloverDamage(DeltaSeconds);
+	SecondsSinceLastImpactDamage += DeltaSeconds;
+
 	if (bAutoDrive)
 	{
 		GetVehicleMovementComponent()->SetThrottleInput(1.f);
 		bHasStartedDriving = true;
 
-		const UChaosWheeledVehicleMovementComponent* WheeledMovement =
-			Cast<UChaosWheeledVehicleMovementComponent>(GetVehicleMovementComponent());
-		UE_LOG(LogTemp, Log, TEXT("[SorVehicle] speed %.1f km/h  throttle %.2f  gear %d  rpm %.0f  z %.1f  wheel0grounded %d"),
-			GetVehicleMovementComponent()->GetForwardSpeed() * 0.036f,
-			GetVehicleMovementComponent()->GetThrottleInput(),
-			GetVehicleMovementComponent()->GetCurrentGear(),
-			WheeledMovement ? WheeledMovement->GetEngineRotationSpeed() : 0.f,
-			GetActorLocation().Z,
-			WheeledMovement && WheeledMovement->GetNumWheels() > 0 ? WheeledMovement->GetWheelState(0).bInContact : false);
+		// Debug telemetry stays throttled to ~2s regardless of tick rate, so
+		// the rollover/damage logic above can run every frame without
+		// spamming the log — matches the -SorAutoDrive verification pattern
+		// used all through this project's development so far.
+		DebugLogAccumulator += DeltaSeconds;
+		if (DebugLogAccumulator >= 2.f)
+		{
+			DebugLogAccumulator = 0.f;
+			const UChaosWheeledVehicleMovementComponent* WheeledMovement =
+				Cast<UChaosWheeledVehicleMovementComponent>(GetVehicleMovementComponent());
+			UE_LOG(LogTemp, Log, TEXT("[SorVehicle] speed %.1f km/h  throttle %.2f  gear %d  rpm %.0f  z %.1f  wheel0grounded %d  cargo %.1f"),
+				GetVehicleMovementComponent()->GetForwardSpeed() * 0.036f,
+				GetVehicleMovementComponent()->GetThrottleInput(),
+				GetVehicleMovementComponent()->GetCurrentGear(),
+				WheeledMovement ? WheeledMovement->GetEngineRotationSpeed() : 0.f,
+				GetActorLocation().Z,
+				WheeledMovement && WheeledMovement->GetNumWheels() > 0 ? WheeledMovement->GetWheelState(0).bInContact : false,
+				CargoIntegrity);
+		}
+	}
+}
+
+void ASorVehiclePawn::TickRolloverDamage(float DeltaSeconds)
+{
+	const float UpDot = FVector::DotProduct(GetActorUpVector(), FVector::UpVector);
+	if (UpDot < RolloverUpDotThreshold)
+	{
+		RolledSeconds += DeltaSeconds;
+		if (RolledSeconds > RolloverGraceSeconds)
+		{
+			ApplyCargoDamage(RolloverDamagePerSecond * DeltaSeconds, TEXT("rollover"));
+		}
+	}
+	else
+	{
+		// Decay rather than snap to 0: a single frame of physics jitter
+		// (or a player rocking the vehicle) mid-rollover shouldn't erase
+		// several seconds of accumulated tip-over time.
+		RolledSeconds = FMath::Max(0.f, RolledSeconds - DeltaSeconds);
+	}
+}
+
+void ASorVehiclePawn::OnChassisHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (SecondsSinceLastImpactDamage < ImpactDamageCooldownSeconds)
+	{
+		// A scrape re-fires OnComponentHit across physics substeps, not
+		// just once per collision — without this, one crash could apply
+		// damage many times in a fraction of a second.
+		return;
+	}
+	const float ImpulseSize = NormalImpulse.Size();
+	if (ImpulseSize > ImpactDamageThresholdImpulse)
+	{
+		ApplyCargoDamage((ImpulseSize - ImpactDamageThresholdImpulse) * ImpactDamageScale, TEXT("impact"));
+		SecondsSinceLastImpactDamage = 0.f;
+	}
+}
+
+void ASorVehiclePawn::ApplyCargoDamage(float Amount, const TCHAR* Reason)
+{
+	if (Amount <= 0.f || CargoIntegrity <= 0.f)
+	{
+		return;
+	}
+	const float Before = CargoIntegrity;
+	CargoIntegrity = FMath::Clamp(CargoIntegrity - Amount, 0.f, 100.f);
+	if (FMath::FloorToInt(Before) != FMath::FloorToInt(CargoIntegrity))
+	{
+		UE_LOG(LogTemp, Log, TEXT("[SorVehicle] cargo damage (%s): %.1f -> %.1f"), Reason, Before, CargoIntegrity);
 	}
 }
 
@@ -171,6 +240,15 @@ void ASorVehiclePawn::BeginPlay()
 	Super::BeginPlay();
 
 	bAutoDrive = FParse::Param(FCommandLine::Get(), TEXT("SorAutoDrive"));
+
+	// Dev tooling: force the "failed" ending path to be reachable for
+	// verification without depending on scripted physics actually landing
+	// a rollover/impact — routes through ApplyCargoDamage so the normal
+	// logging path is exercised too, not just the raw variable.
+	if (FParse::Param(FCommandLine::Get(), TEXT("SorForceCargoDamage")))
+	{
+		ApplyCargoDamage(80.f, TEXT("debug-forced"));
+	}
 
 	if (const APlayerController* PC = Cast<APlayerController>(GetController()))
 	{

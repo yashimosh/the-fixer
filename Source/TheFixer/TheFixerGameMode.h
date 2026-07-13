@@ -58,6 +58,10 @@ private:
 	static constexpr float IntroMinimumSeconds = 2.5f;
 	float IntroShownAtSeconds = 0.f;
 
+	// Cargo integrity (0-100, see ASorVehiclePawn::GetCargoIntegrity) at or
+	// above this at the ending resolves "clean"; below resolves "failed".
+	static constexpr float CargoIntegrityCleanThreshold = 50.f;
+
 	bool bIntroShowing = false;
 	int32 NextBeatIndex = 0;
 	bool bEndingShown = false;
