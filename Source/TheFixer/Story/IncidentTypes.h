@@ -52,4 +52,14 @@ struct FIncident
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Incident")
 	TArray<FIncidentEnding> Endings;
+
+	// Distance at which the run resolves and an ending card is shown.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Incident")
+	float EndingDistanceMeters = 900.f;
+
+	// Ending won't show before this many seconds of driving, even if the
+	// distance threshold is already crossed (mirrors the web prototype's
+	// minimum-run-length gate so a stalled/reversing start can't skip to it).
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Incident")
+	float MinimumRunSeconds = 8.f;
 };

@@ -152,6 +152,7 @@ void ASorVehiclePawn::Tick(float DeltaSeconds)
 	if (bAutoDrive)
 	{
 		GetVehicleMovementComponent()->SetThrottleInput(1.f);
+		bHasStartedDriving = true;
 
 		const UChaosWheeledVehicleMovementComponent* WheeledMovement =
 			Cast<UChaosWheeledVehicleMovementComponent>(GetVehicleMovementComponent());
@@ -218,7 +219,12 @@ void ASorVehiclePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
 
 void ASorVehiclePawn::OnThrottle(const FInputActionValue& Value)
 {
-	GetVehicleMovementComponent()->SetThrottleInput(Value.Get<float>());
+	const float ThrottleValue = Value.Get<float>();
+	GetVehicleMovementComponent()->SetThrottleInput(ThrottleValue);
+	if (!bHasStartedDriving && FMath::Abs(ThrottleValue) > 0.05f)
+	{
+		bHasStartedDriving = true;
+	}
 }
 
 void ASorVehiclePawn::OnBrake(const FInputActionValue& Value)

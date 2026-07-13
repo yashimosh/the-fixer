@@ -17,7 +17,10 @@ public class TheFixer : ModuleRules
 			"ChaosVehiclesCore",
 			"PhysicsCore",
 			"Json",
-			"JsonUtilities"
+			"JsonUtilities",
+			"UMG",
+			"Slate",
+			"SlateCore"
 		});
 	}
 }

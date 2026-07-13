@@ -29,12 +29,19 @@ public:
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
+	// True from the first meaningful throttle input onward. The game mode
+	// uses this to dismiss the intro card the moment the player starts
+	// driving, instead of gating on a UI button.
+	UFUNCTION(BlueprintPure, Category = "Sor")
+	bool HasStartedDriving() const { return bHasStartedDriving; }
+
 	// Dev scaffold: logs speed every couple of seconds for headless verification.
 	// Launch with -SorAutoDrive to hold full throttle from code.
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
 	bool bAutoDrive = false;
+	bool bHasStartedDriving = false;
 
 protected:
 	virtual void BeginPlay() override;

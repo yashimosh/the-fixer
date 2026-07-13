@@ -5,7 +5,7 @@
 	"introText": "April 2017. The old city is mostly bricks now.\nYou drove a French team in last week. They were yours all morning.\nThis one is alone. American. Doesn't speak Arabic. You don't know him.\nTwo camera cases. A satellite phone. Body armour he hasn't worn yet.\nEngine on at 04:47. The streets are still empty.",
 	"beats": [
 		{
-			"triggerDistanceMeters": 800,
+			"triggerDistanceMeters": 400,
 			"text": "The Hilux took a JDAM in March. Two were inside.\nCoalition said they had clearance."
 		}
 	],
@@ -18,5 +18,7 @@
 			"key": "failed",
 			"text": "She doesn't get interviewed.\nSomeone else, somewhere else, eventually does.\nThe world will catch up to her in its own time."
 		}
-	]
+	],
+	"endingDistanceMeters": 900,
+	"minimumRunSeconds": 8
 }
