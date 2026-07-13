@@ -1,0 +1,24 @@
+{
+	"id": "kobani-2015",
+	"title": "Kobani — Across the Line",
+	"year": 2015,
+	"introText": "January 2015. Kobani is not yet secured, but it is no longer contested.\nA French TV producer and a cameraman. Two passports that won't be checked.\nA camera, a tripod, audio gear. Body armour still in its plastic.\nThe border crossing is officially closed. You know three that aren't.\nEngine on at 02:00. The last two kilometres before the border are black with ash.",
+	"beats": [
+		{
+			"triggerDistanceMeters": 400,
+			"text": "The old crossing point is rubble now. YPG spotters wave you toward the second route without a word.\nThree hundred metres of open ground. Then the tree line."
+		}
+	],
+	"endings": [
+		{
+			"key": "clean",
+			"text": "You get them across before first light. A YPJ escort takes them the rest of the way into the city.\nThree weeks later, the segment airs on France 2 — eleven minutes, prime time.\nThe crossing point closes again two days after you used it."
+		},
+		{
+			"key": "failed",
+			"text": "The second route is watched tonight — a truck idles at the tree line with its lights off.\nYou turn back. The producer argues from the passenger seat the whole way to Erbil.\nThey file nothing from Kobani. The France 2 desk runs archive footage instead."
+		}
+	],
+	"endingDistanceMeters": 900,
+	"minimumRunSeconds": 8
+}
