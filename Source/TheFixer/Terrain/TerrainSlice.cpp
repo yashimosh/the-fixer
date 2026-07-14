@@ -1,7 +1,9 @@
 #include "TerrainSlice.h"
 
 #include "FixerTerrainMath.h"
+#include "Materials/MaterialInterface.h"
 #include "ProceduralMeshComponent.h"
+#include "UObject/ConstructorHelpers.h"
 
 ATerrainSlice::ATerrainSlice()
 {
@@ -12,6 +14,12 @@ ATerrainSlice::ATerrainSlice()
 	Mesh->bUseComplexAsSimpleCollision = true;
 	Mesh->SetCollisionProfileName(TEXT("BlockAll"));
 	Mesh->SetMobility(EComponentMobility::Static);
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> Ground(TEXT("/Game/Materials/M_TerrainGround"));
+	if (Ground.Succeeded())
+	{
+		GroundMaterial = Ground.Object;
+	}
 }
 
 void ATerrainSlice::OnConstruction(const FTransform& Transform)
@@ -94,4 +102,12 @@ void ATerrainSlice::BuildMesh()
 	}
 
 	Mesh->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs, EmptyColors, EmptyTangents, /*bCreateCollision=*/true);
+	if (GroundMaterial)
+	{
+		Mesh->SetMaterial(0, GroundMaterial);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[TerrainSlice] GroundMaterial failed to load -- terrain will render with the engine default fallback."));
+	}
 }

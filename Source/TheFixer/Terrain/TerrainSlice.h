@@ -5,6 +5,7 @@
 #include "TerrainSlice.generated.h"
 
 class UProceduralMeshComponent;
+class UMaterialInterface;
 
 /**
  * A single procedurally-generated terrain mesh, sampling
@@ -47,6 +48,12 @@ protected:
 private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UProceduralMeshComponent> Mesh;
+
+	// Flat dusty-tan placeholder (Materials/M_TerrainGround) -- without an
+	// explicit material CreateMeshSection falls back to the engine default
+	// grey, which reads as unfinished rather than deliberately low-poly.
+	UPROPERTY(EditAnywhere, Category = "Terrain")
+	TObjectPtr<UMaterialInterface> GroundMaterial;
 
 	void BuildMesh();
 };

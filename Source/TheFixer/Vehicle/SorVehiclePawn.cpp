@@ -73,6 +73,16 @@ ASorVehiclePawn::ASorVehiclePawn()
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(GetMesh());
+	// The skeletal mesh's own origin sits at/near ground/suspension-contact
+	// height, not cabin height. With the pivot left at (0,0,0) the arm's
+	// collision probe starts already touching (or inside) the BlockAll
+	// terrain mesh directly beneath the vehicle, so every sweep reports an
+	// immediate hit and the arm collapses to zero length -- confirmed via
+	// debug telemetry: camera/socket/pivot/actor/mesh world locations were
+	// all bit-for-bit identical at three different points along a 6km
+	// drive, which a terrain-slope-dependent collision would not produce.
+	// Lifting the pivot to roughly cabin height clears the terrain surface.
+	SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 150.f));
 	SpringArm->TargetArmLength = 650.f;
 	SpringArm->SocketOffset = FVector(0.f, 0.f, 150.f);
 	SpringArm->bEnableCameraRotationLag = true;
@@ -81,7 +91,14 @@ ASorVehiclePawn::ASorVehiclePawn()
 	SpringArm->bInheritRoll = false;
 
 	ChaseCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("ChaseCamera"));
-	ChaseCamera->SetupAttachment(SpringArm);
+	// Must attach to the arm's own socket (its computed end-point), not the
+	// bare component -- without USpringArmComponent::SocketName, the camera
+	// attaches to the arm's pivot transform directly, silently ignoring
+	// TargetArmLength and SocketOffset entirely. Confirmed via debug
+	// telemetry: camera/actor/mesh world locations were bit-for-bit
+	// identical, i.e. the camera sat exactly at the vehicle's mesh origin
+	// instead of 650cm behind and 150cm up.
+	ChaseCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 	ChaseCamera->SetRelativeRotation(FRotator(-8.f, 0.f, 0.f));
 
 	// Input assets from the template pack; overridable per-instance/BP.
@@ -158,6 +175,21 @@ void ASorVehiclePawn::Tick(float DeltaSeconds)
 
 	TickRolloverDamage(DeltaSeconds);
 	SecondsSinceLastImpactDamage += DeltaSeconds;
+
+	if (bScreenshotRequested && !bScreenshotTaken)
+	{
+		ScreenshotAccumulator += DeltaSeconds;
+		if (ScreenshotAccumulator >= ScreenshotAtSeconds)
+		{
+			bScreenshotTaken = true;
+			if (APlayerController* PC = Cast<APlayerController>(GetController()))
+			{
+				UE_LOG(LogTemp, Log, TEXT("[SorVehicle] taking debug screenshot. camera=%s actor=%s"),
+					*ChaseCamera->GetComponentLocation().ToString(), *GetActorLocation().ToString());
+				PC->ConsoleCommand(TEXT("HighResShot 1280x720"), true);
+			}
+		}
+	}
 
 	if (bAutoDrive)
 	{
@@ -265,6 +297,7 @@ void ASorVehiclePawn::BeginPlay()
 
 	bAutoDrive = FParse::Param(FCommandLine::Get(), TEXT("SorAutoDrive"));
 	bAutoCrash = FParse::Param(FCommandLine::Get(), TEXT("SorAutoCrash"));
+	bScreenshotRequested = FParse::Param(FCommandLine::Get(), TEXT("SorScreenshot"));
 
 	// Dev tooling: force the "failed" ending path to be reachable for
 	// verification without depending on scripted physics actually landing

@@ -52,6 +52,18 @@ private:
 	bool bAutoCrash = false; // -SorAutoCrash: also steers off the corridor into the mountain flank, for calibration testing
 	bool bHasStartedDriving = false;
 
+	// -SorScreenshot: captures a real frame to disk a few seconds into the
+	// run, via the console command system (no extra engine headers needed).
+	// Every prior "verification" pass in this project's history was log-
+	// telemetry only (speed/position numbers) -- none of it could catch a
+	// wrong camera angle or a missing material, because nothing ever
+	// actually looked at a rendered frame. This is permanent dev tooling,
+	// matching the -SorAutoDrive/-SorAutoCrash/-SorForceCargoDamage pattern.
+	bool bScreenshotRequested = false;
+	bool bScreenshotTaken = false;
+	float ScreenshotAtSeconds = 10.f;
+	float ScreenshotAccumulator = 0.f;
+
 	float CargoIntegrity = 100.f;
 	float RolledSeconds = 0.f;
 	float DebugLogAccumulator = 0.f;
