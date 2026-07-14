@@ -30,7 +30,22 @@ ASorVehiclePawn::ASorVehiclePawn()
 	// re-enable it. We're Blueprint-free, so it has to happen here instead.
 	GetMesh()->SetSimulatePhysics(true);
 
-	// Placeholder truck: engine template offroad car until the Land Cruiser lands.
+	// Reverted to the placeholder offroad rig for now. A reshaped Land
+	// Cruiser stand-in (from the free UAZ-469 model, Low Poly Soviet Cars
+	// pack, Fab.com) was built and imported at /Game/Vehicles/LandCruiser/
+	// -- looks right (see commit history / Tools/build_land_cruiser_rig.py)
+	// but the vehicle would not drive on it: throttle at 1.0 forever held
+	// engine RPM pinned at idle (800) with zero speed, all 4 wheels
+	// reporting grounded contact. Investigated at length (bone positions
+	// confirmed correct in both Blender and the imported skeleton; wheel
+	// radius rescaled to match the real model's proportions instead of the
+	// old inflated 50cm; suspension travel increased; chassis-vs-terrain
+	// collision ruled out as the cause after disabling it made the vehicle
+	// free-fall through the terrain instead) without finding the actual
+	// root cause. Reverting to keep the game drivable rather than leaving
+	// it broken; the Land Cruiser assets are still in the project for a
+	// focused follow-up session. See ~/claude-brain/Projects/personal/
+	// the-fixer.md for the full investigation trail.
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> BodyMesh(TEXT("/Game/Vehicles/OffroadCar/SKM_Offroad"));
 	if (BodyMesh.Succeeded())
 	{
@@ -225,14 +240,26 @@ void ASorVehiclePawn::Tick(float DeltaSeconds)
 			DebugLogAccumulator = 0.f;
 			const UChaosWheeledVehicleMovementComponent* WheeledMovement =
 				Cast<UChaosWheeledVehicleMovementComponent>(GetVehicleMovementComponent());
-			UE_LOG(LogTemp, Log, TEXT("[SorVehicle] speed %.1f km/h  throttle %.2f  gear %d  rpm %.0f  z %.1f  wheel0grounded %d  cargo %.1f"),
+			UE_LOG(LogTemp, Log, TEXT("[SorVehicle] speed %.1f km/h  throttle %.2f  gear %d  rpm %.0f  z %.1f  wheel0grounded %d  cargo %.1f  handbrake %d  brake %.2f  mass %.0f"),
 				GetVehicleMovementComponent()->GetForwardSpeed() * 0.036f,
 				GetVehicleMovementComponent()->GetThrottleInput(),
 				GetVehicleMovementComponent()->GetCurrentGear(),
 				WheeledMovement ? WheeledMovement->GetEngineRotationSpeed() : 0.f,
 				GetActorLocation().Z,
 				WheeledMovement && WheeledMovement->GetNumWheels() > 0 ? WheeledMovement->GetWheelState(0).bInContact : false,
-				CargoIntegrity);
+				CargoIntegrity,
+				GetVehicleMovementComponent()->GetHandbrakeInput(),
+				GetVehicleMovementComponent()->GetBrakeInput(),
+				GetVehicleMovementComponent()->Mass);
+			if (WheeledMovement)
+			{
+				for (int32 i = 0; i < WheeledMovement->GetNumWheels(); ++i)
+				{
+					const auto& WS = WheeledMovement->GetWheelState(i);
+					UE_LOG(LogTemp, Log, TEXT("[SorVehicle]   wheel %d: contact=%d suspLen=%.2f springForce=%.1f contactPoint=%s"),
+						i, WS.bInContact, WS.NormalizedSuspensionLength, WS.SpringForce, *WS.ContactPoint.ToString());
+				}
+			}
 		}
 	}
 }

@@ -22,3 +22,7 @@ Thumbs.db
 
 # Local-only reference assets
 media/
+
+# Downloaded/exported source files for asset pipelines (regenerate via
+# Tools/build_*.py rather than committing large intermediate binaries)
+ImportStaging/
