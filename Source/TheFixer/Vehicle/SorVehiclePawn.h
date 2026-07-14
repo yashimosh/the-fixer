@@ -47,6 +47,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Sor")
 	float GetCargoIntegrity() const { return CargoIntegrity; }
 
+	// Fires whenever ApplyCargoDamage actually lands a hit -- the game mode
+	// binds this to trigger camera shake + a diegetic line. Kept on the
+	// pawn as a plain broadcast rather than a game-mode poll so the pawn
+	// stays ignorant of UI/presentation, matching the existing separation
+	// (game mode reads GetCargoIntegrity(), never the reverse).
+	DECLARE_MULTICAST_DELEGATE(FOnCargoDamaged);
+	FOnCargoDamaged OnCargoDamaged;
+
 private:
 	bool bAutoDrive = false;
 	bool bAutoCrash = false; // -SorAutoCrash: also steers off the corridor into the mountain flank, for calibration testing

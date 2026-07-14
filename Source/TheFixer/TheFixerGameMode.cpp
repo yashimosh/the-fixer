@@ -1,11 +1,13 @@
 #include "TheFixerGameMode.h"
 
 #include "Blueprint/UserWidget.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Story/IncidentSubsystem.h"
 #include "UI/StoryCardWidget.h"
+#include "Vehicle/CargoDamageCameraShake.h"
 #include "Vehicle/SorVehiclePawn.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFixerRun, Log, All);
@@ -58,6 +60,7 @@ void ATheFixerGameMode::BeginRun()
 
 	RunStartLocation = TrackedVehicle->GetActorLocation();
 	RunStartForward = TrackedVehicle->GetActorForwardVector();
+	TrackedVehicle->OnCargoDamaged.AddUObject(this, &ATheFixerGameMode::HandleCargoDamaged);
 
 	CardWidget = CreateWidget<UStoryCardWidget>(GetWorld(), StoryCardWidgetClass);
 	if (!CardWidget)
@@ -80,6 +83,7 @@ void ATheFixerGameMode::Tick(float DeltaSeconds)
 	}
 
 	ElapsedSeconds += DeltaSeconds;
+	SecondsSinceLastCargoFeedback += DeltaSeconds;
 
 	if (bIntroShowing)
 	{
@@ -151,6 +155,34 @@ void ATheFixerGameMode::ShowEnding()
 		return;
 	}
 	CardWidget->ShowCard(Ending->Text, 0.f);
+}
+
+void ATheFixerGameMode::HandleCargoDamaged()
+{
+	if (SecondsSinceLastCargoFeedback < CargoFeedbackCooldownSeconds)
+	{
+		// Rollover damage ticks every frame -- without this, a sustained
+		// tumble would restart the shake dozens of times a second.
+		return;
+	}
+	SecondsSinceLastCargoFeedback = 0.f;
+
+	if (APlayerController* PC = Cast<APlayerController>(TrackedVehicle->GetController()))
+	{
+		if (PC->PlayerCameraManager)
+		{
+			PC->PlayerCameraManager->StartCameraShake(UCargoDamageCameraShake::StaticClass());
+		}
+	}
+
+	// Playtest-validated line, reused verbatim rather than inventing new
+	// copy (PLAYTEST-LOG.md, 2026-05-09 web-prototype fix for the exact
+	// same silent-mechanic gap). Skip rather than interrupt if a beat/
+	// intro/ending is already up -- the shake alone still signals the hit.
+	if (CardWidget && !CardWidget->IsShowingCard())
+	{
+		CardWidget->ShowCard(TEXT("Something shifts behind you. You hear it."), 1.5f);
+	}
 }
 
 float ATheFixerGameMode::GetDistanceDrivenMeters() const

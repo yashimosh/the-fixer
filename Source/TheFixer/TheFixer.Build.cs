@@ -21,7 +21,8 @@ public class TheFixer : ModuleRules
 			"UMG",
 			"Slate",
 			"SlateCore",
-			"ProceduralMeshComponent"
+			"ProceduralMeshComponent",
+			"EngineCameras"
 		});
 	}
 }

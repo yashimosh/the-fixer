@@ -20,6 +20,7 @@
 #include "Misc/Parse.h"
 #include "SorWheelFront.h"
 #include "SorWheelRear.h"
+#include "UnrealClient.h"
 #include "UObject/ConstructorHelpers.h"
 
 ASorVehiclePawn::ASorVehiclePawn()
@@ -186,7 +187,14 @@ void ASorVehiclePawn::Tick(float DeltaSeconds)
 			{
 				UE_LOG(LogTemp, Log, TEXT("[SorVehicle] taking debug screenshot. camera=%s actor=%s"),
 					*ChaseCamera->GetComponentLocation().ToString(), *GetActorLocation().ToString());
-				PC->ConsoleCommand(TEXT("HighResShot 1280x720"), true);
+				// Neither "HighResShot" nor the plain "Shot" console command
+				// capture the UI layer -- HighResShot bypasses Slate
+				// compositing entirely, and the "Shot" exec handler
+				// hardcodes bShowUI=false (confirmed by reading
+				// UnrealClient.cpp). FScreenshotRequest::RequestScreenshot
+				// called directly with bInShowUI=true is the only path that
+				// actually includes story cards/HUD in the capture.
+				FScreenshotRequest::RequestScreenshot(/*bInShowUI=*/true, /*bInRestrictToGameViewport=*/false);
 			}
 		}
 	}
@@ -288,6 +296,7 @@ void ASorVehiclePawn::ApplyCargoDamage(float Amount, const TCHAR* Reason)
 	if (FMath::FloorToInt(Before) != FMath::FloorToInt(CargoIntegrity))
 	{
 		UE_LOG(LogTemp, Log, TEXT("[SorVehicle] cargo damage (%s): %.1f -> %.1f"), Reason, Before, CargoIntegrity);
+		OnCargoDamaged.Broadcast();
 	}
 }
 
@@ -298,14 +307,28 @@ void ASorVehiclePawn::BeginPlay()
 	bAutoDrive = FParse::Param(FCommandLine::Get(), TEXT("SorAutoDrive"));
 	bAutoCrash = FParse::Param(FCommandLine::Get(), TEXT("SorAutoCrash"));
 	bScreenshotRequested = FParse::Param(FCommandLine::Get(), TEXT("SorScreenshot"));
+	FParse::Value(FCommandLine::Get(), TEXT("SorScreenshotDelay="), ScreenshotAtSeconds);
 
 	// Dev tooling: force the "failed" ending path to be reachable for
 	// verification without depending on scripted physics actually landing
 	// a rollover/impact — routes through ApplyCargoDamage so the normal
-	// logging path is exercised too, not just the raw variable.
+	// logging path is exercised too, not just the raw variable. Deferred
+	// well past the intro's minimum display time (2.5s, see
+	// ATheFixerGameMode::IntroMinimumSeconds) rather than fired inline:
+	// the game mode binds OnCargoDamaged from its own BeginRun, itself
+	// delayed 0.1s behind BeginPlay, so an immediate call fires before
+	// anything is listening -- and even once bound, the resulting
+	// diegetic card would be silently skipped by IsShowingCard() while
+	// the intro (or its 0.4s fade-out, see StoryCardWidget's FadeSpeed)
+	// is still up. Confirmed via debug telemetry that a 3.2s delay still
+	// landed inside that fade-out window -- 5s is a comfortable margin.
 	if (FParse::Param(FCommandLine::Get(), TEXT("SorForceCargoDamage")))
 	{
-		ApplyCargoDamage(80.f, TEXT("debug-forced"));
+		FTimerHandle ForceCargoDamageTimer;
+		GetWorldTimerManager().SetTimer(ForceCargoDamageTimer, [this]()
+		{
+			ApplyCargoDamage(80.f, TEXT("debug-forced"));
+		}, 5.f, false);
 	}
 
 	if (const APlayerController* PC = Cast<APlayerController>(GetController()))

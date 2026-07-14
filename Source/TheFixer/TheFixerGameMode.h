@@ -37,6 +37,7 @@ private:
 	void ShowIntro();
 	void ShowBeat(const FIncidentBeat& Beat);
 	void ShowEnding();
+	void HandleCargoDamaged();
 	float GetDistanceDrivenMeters() const;
 
 	FIncident CurrentIncident;
@@ -65,6 +66,14 @@ private:
 	bool bIntroShowing = false;
 	int32 NextBeatIndex = 0;
 	bool bEndingShown = false;
+
+	// Cargo damage can land many times per second during a sustained
+	// rollover (ASorVehiclePawn ticks rollover damage every frame); without
+	// a cooldown here the shake would restart continuously and the card
+	// would fight itself. This debounces the FEEDBACK signal only -- the
+	// underlying damage still applies at full resolution.
+	static constexpr float CargoFeedbackCooldownSeconds = 1.f;
+	float SecondsSinceLastCargoFeedback = 1000.f;
 
 	FTimerHandle BeginRunTimerHandle;
 };
