@@ -1,0 +1,24 @@
+{
+	"id": "raqqa-2017",
+	"title": "Raqqa — The Fall",
+	"year": 2017,
+	"introText": "October 2017. Raqqa fell last week.\nYou've driven this one six times before. He knows your sister's name.\nCamera. Recorder. Years of notebooks in a leather satchel. A thermos.\nThe SDF is running guided press tours. He doesn't want the tour -- he wants the prison.\nEngine on at 06:00. The crossing into Rojava is one of your back routes.",
+	"beats": [
+		{
+			"triggerDistanceMeters": 400,
+			"text": "Children selling cigarettes on the main road. The buildings behind them have no roofs.\nThe prison compound is two kilometres past the last SDF checkpoint."
+		}
+	],
+	"endings": [
+		{
+			"key": "clean",
+			"text": "The prison warden lets him in for forty minutes. Three interviews. Two on camera.\nEleven thousand words. Two issues. The following spring.\nHe sends you a copy. Your name is in the acknowledgments, spelled wrong."
+		},
+		{
+			"key": "failed",
+			"text": "The warden changes his mind at the gate. No cameras. No recorder. Notebooks only.\nHe writes for an hour. Eleven thousand words sit on his hard drive for three months.\nA twelve-minute podcast episode airs in December. The detainees are not named."
+		}
+	],
+	"endingDistanceMeters": 900,
+	"minimumRunSeconds": 8
+}
